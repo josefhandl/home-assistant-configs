@@ -1,0 +1,54 @@
+esphome:
+  name: xbie-storage
+  platform: ESP8266
+  board: d1_mini
+
+<<: !include base.yaml
+
+output:
+  - platform: esp8266_pwm
+    pin: D3
+    frequency: 1000 Hz
+    id: pwm_output_0
+  - platform: esp8266_pwm
+    pin: D7
+    frequency: 1000 Hz
+    id: pwm_output_1
+
+binary_sensor:
+  - platform: gpio
+    pin: D6
+    name: "Button"
+#    device_class: window
+
+i2c:
+  sda: D2
+  scl: D1
+  scan: true
+  id: bus_a
+
+sensor:
+  - platform: bmp280
+    temperature:
+      name: "Temperature"
+      oversampling: 8x
+      accuracy_decimals: 2
+# teplomer ukazuje trochu vic, protoze je schovany v polici, ktera je ohrata od elektroniky
+      filters:
+        - offset: -0.8
+    pressure:
+      name: "Pressure"
+      oversampling: 8x
+#    humidity:
+#      name: "Humidity"
+    address: 0x76
+    update_interval: 15s
+
+light:
+  - platform: monochromatic
+    output: pwm_output_0
+    name: "B"
+  - platform: monochromatic
+    output: pwm_output_1
+    name: "P"
+

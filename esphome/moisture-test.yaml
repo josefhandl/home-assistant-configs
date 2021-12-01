@@ -1,0 +1,22 @@
+esphome:
+  name: xbie-test
+  platform: ESP8266
+  board: d1_mini
+
+<<: !include base.yaml
+
+sensor:
+  platform: adc
+  pin: A0
+  id: moisture_sensor
+  name: "Soil Moisture"
+  unit_of_measurement: "%"
+  update_interval: 15s
+  accuracy_decimals: 0
+  filters:
+# Sensor dry around 1.0 Volt, sensor wet around 0.45 Volt.
+      - calibrate_linear:
+          - 1.0 -> 0.0
+          - 0.45 -> 100.0
+            #      - lambda: if (x < 1) return 0; else return (x);
+

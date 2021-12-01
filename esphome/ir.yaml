@@ -1,0 +1,134 @@
+esphome:
+  name: xbie-ir
+  platform: ESP8266
+  board: d1_mini
+
+<<: !include base.yaml
+
+remote_receiver:
+  pin: 
+    number: D3
+    inverted: True
+    mode: INPUT_PULLUP
+  dump: nec
+  idle: 25ms
+
+binary_sensor:
+  - platform: gpio
+    pin: D1
+    name: "button"
+
+remote_transmitter:
+  pin: D2
+  carrier_duty_percent: 50%
+
+# Individual switches
+switch:
+
+# TV
+# ======
+  - platform: template
+    name: "tv.power"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0x10EF
+  - platform: template
+    name: "tv.poweron"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0x23DC
+  - platform: template
+    name: "tv.poweroff"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0xA35C
+
+  - platform: template
+    name: "tv.hdmi1"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0x738C
+  - platform: template
+    name: "tv.hdmi2"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0x33CC
+  - platform: template
+    name: "tv.hdmi3"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0x9768
+
+  - platform: template
+    name: "tv.volup"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0x40BF
+  - platform: template
+    name: "tv.voldown"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0xC03F
+  - platform: template
+    name: "tv.volmute"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0x906F
+
+  - platform: template
+    name: "tv.exit"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x20DF
+        command: 0xDA25
+
+# Hi-Fi
+# ======
+  - platform: template
+    name: "hifi.power"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x00FF
+        command: 0x00FF
+
+  - platform: template
+    name: "hifi.volup"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x00FF
+        command: 0x48B7
+  - platform: template
+    name: "hifi.voldown"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x00FF
+        command: 0xD02F
+  - platform: template
+    name: "hifi.volmute"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x00FF
+        command: 0x50AF
+
+  - platform: template
+    name: "hifi.soundmode"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x00FF
+        command: 0x30CF
+  - platform: template
+    name: "hifi.hbs"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0x00FF
+        command: 0xB04F
+
