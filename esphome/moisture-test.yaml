@@ -1,5 +1,5 @@
 esphome:
-  name: xbie-test
+  name: tin
   platform: ESP8266
   board: d1_mini
 

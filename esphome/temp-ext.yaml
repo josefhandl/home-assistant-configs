@@ -1,0 +1,30 @@
+esphome:
+  name: iron
+  platform: ESP8266
+  board: d1_mini
+
+<<: !include base.yaml
+
+binary_sensor:
+  - platform: gpio
+    pin: D3
+    name: "Button"
+
+i2c:
+  sda: D2
+  scl: D1
+  scan: true
+  id: bus_a
+
+sensor:
+  - platform: bmp280
+    temperature:
+      name: "Temperature"
+      oversampling: 8x
+      accuracy_decimals: 2
+    pressure:
+      name: "Pressure"
+      oversampling: 8x
+    address: 0x76
+    update_interval: 15s
+
