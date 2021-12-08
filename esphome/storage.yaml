@@ -1,5 +1,8 @@
+substitutions:
+  device: iridium
+
 esphome:
-  name: iridium
+  name: ${device}
   platform: ESP8266
   board: d1_mini
 
@@ -18,7 +21,7 @@ output:
 binary_sensor:
   - platform: gpio
     pin: D6
-    name: "Button"
+    name: "${device}.button"
 #    device_class: window
 
 i2c:
@@ -30,14 +33,14 @@ i2c:
 sensor:
   - platform: bmp280
     temperature:
-      name: "Temperature"
+      name: "${device}.temperature"
       oversampling: 8x
       accuracy_decimals: 2
 # teplomer ukazuje trochu vic, protoze je schovany v polici, ktera je ohrata od elektroniky
       filters:
         - offset: -0.8
     pressure:
-      name: "Pressure"
+      name: "${device}.pressure"
       oversampling: 8x
 #    humidity:
 #      name: "Humidity"
@@ -47,8 +50,8 @@ sensor:
 light:
   - platform: monochromatic
     output: pwm_output_0
-    name: "B"
+    name: "${device}.white"
   - platform: monochromatic
     output: pwm_output_1
-    name: "P"
+    name: "${device}.violet"
 

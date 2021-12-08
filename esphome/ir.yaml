@@ -1,5 +1,8 @@
+substitutions:
+  device: nickel
+
 esphome:
-  name: nickel
+  name: ${device}
   platform: ESP8266
   board: d1_mini
 
@@ -16,7 +19,7 @@ remote_receiver:
 binary_sensor:
   - platform: gpio
     pin: D1
-    name: "button"
+    name: "${device}.button"
 
 remote_transmitter:
   pin: D2

@@ -1,5 +1,8 @@
+substitutions:
+  device: tin
+
 esphome:
-  name: tin
+  name: ${device}
   platform: ESP8266
   board: d1_mini
 
@@ -9,7 +12,7 @@ sensor:
   platform: adc
   pin: A0
   id: moisture_sensor
-  name: "Soil Moisture"
+  name: "${device}.soil_moisture"
   unit_of_measurement: "%"
   update_interval: 15s
   accuracy_decimals: 0
