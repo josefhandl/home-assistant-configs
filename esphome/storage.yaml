@@ -34,6 +34,7 @@ sensor:
   - platform: bmp280
     temperature:
       name: "${device}.temperature"
+      device_class: "temperature"
       oversampling: 8x
       accuracy_decimals: 2
 # teplomer ukazuje trochu vic, protoze je schovany v polici, ktera je ohrata od elektroniky
@@ -41,6 +42,7 @@ sensor:
         - offset: -0.8
     pressure:
       name: "${device}.pressure"
+      device_class: "pressure"
       oversampling: 8x
 #    humidity:
 #      name: "Humidity"
