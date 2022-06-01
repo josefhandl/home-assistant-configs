@@ -34,65 +34,65 @@ switch:
     name: "tv.power"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0x10EF
+        address: 0xFB04
+        command: 0xF708
   - platform: template
     name: "tv.poweron"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0x23DC
+        address: 0xFB04
+        command: 0x3BC4
   - platform: template
     name: "tv.poweroff"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0xA35C
+        address: 0xFB04
+        command: 0x3AC5
 
   - platform: template
     name: "tv.hdmi1"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0x738C
+        address: 0xFB04
+        command: 0x31CE
   - platform: template
     name: "tv.hdmi2"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
+        address: 0xFB04
         command: 0x33CC
   - platform: template
     name: "tv.hdmi3"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0x9768
+        address: 0xFB04
+        command: 0x16E9
 
   - platform: template
     name: "tv.volup"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0x40BF
+        address: 0xFB04
+        command: 0xFD02
   - platform: template
     name: "tv.voldown"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0xC03F
+        address: 0xFB04
+        command: 0xFC03
   - platform: template
     name: "tv.volmute"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0x906F
+        address: 0xFB04
+        command: 0xF609
 
   - platform: template
     name: "tv.exit"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x20DF
-        command: 0xDA25
+        address: 0xFB04
+        command: 0xA45B
 
 # Hi-Fi
 # ======
@@ -100,38 +100,54 @@ switch:
     name: "hifi.power"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x00FF
-        command: 0x00FF
+        address: 0xFF00
+        command: 0xFF00
 
   - platform: template
     name: "hifi.volup"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x00FF
-        command: 0x48B7
+        address: 0xFF00
+        command: 0xED12
   - platform: template
     name: "hifi.voldown"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x00FF
-        command: 0xD02F
+        address: 0xFF00
+        command: 0xF40B
   - platform: template
     name: "hifi.volmute"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x00FF
-        command: 0x50AF
+        address: 0xFF00
+        command: 0xF50A
 
   - platform: template
     name: "hifi.soundmode"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x00FF
-        command: 0x30CF
+        address: 0xFF00
+        command: 0xF30C
   - platform: template
     name: "hifi.hbs"
     turn_on_action:
       remote_transmitter.transmit_nec:
-        address: 0x00FF
-        command: 0xB04F
+        address: 0xFF00
+        command: 0xF20D
+
+# Xbox
+# ======
+
+  - platform: template
+    name: "xbox.poweron"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xD880
+        command: 0xD629
+  - platform: template
+    name: "xbox.poweroff"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xD880
+        command: 0xD52A
 
