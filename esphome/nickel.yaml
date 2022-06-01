@@ -143,11 +143,11 @@ switch:
     turn_on_action:
       remote_transmitter.transmit_nec:
         address: 0xD880
-        command: 0xD629
+        command: 0xD52A
   - platform: template
     name: "xbox.poweroff"
     turn_on_action:
       remote_transmitter.transmit_nec:
         address: 0xD880
-        command: 0xD52A
+        command: 0xD629
 
