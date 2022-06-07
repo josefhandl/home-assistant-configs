@@ -31,7 +31,7 @@ i2c:
   id: bus_a
 
 sensor:
-  - platform: bmp280
+  - platform: bme280
     temperature:
       name: "${device}.temperature"
       device_class: "temperature"
@@ -44,8 +44,10 @@ sensor:
       name: "${device}.pressure"
       device_class: "pressure"
       oversampling: 8x
-#    humidity:
-#      name: "Humidity"
+    humidity:
+      name: "${device}.humidity"
+      device_class: "humidity"
+      oversampling: 8x
     address: 0x76
     update_interval: 15s
 
