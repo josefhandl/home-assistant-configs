@@ -1,0 +1,44 @@
+substitutions:
+  device: silver
+
+esphome:
+  name: ${device}
+  platform: ESP8266
+  board: d1_mini
+  includes:
+  - audio_switch.h
+  - audio_input.h
+
+<<: !include ../base.yaml
+
+custom_component:
+- lambda: |-
+    auto audio_switch = AudioSwitch::getInstance();
+    return {audio_switch};
+  components:
+  - id: audio_switch_id
+
+sensor:
+  - platform: custom
+    lambda: |-
+      auto audio_input = AudioInput::getInstance();
+      //auto audio_input = new AudioInput();
+      App.register_component(audio_input);
+      return {audio_input};
+    sensors:
+      name: "${device}.audio_input"
+      id: audio_input_id
+
+switch:
+  - platform: template
+    name: "${device}.turn_on"
+    turn_on_action:
+      then:
+        - lambda: |-
+            static_cast<AudioInput*>(id(audio_input_id))->turn_on();
+  - platform: template
+    name: "${device}.turn_off"
+    turn_on_action:
+      then:
+        - lambda: |-
+            static_cast<AudioInput*>(id(audio_input_id))->turn_off();
