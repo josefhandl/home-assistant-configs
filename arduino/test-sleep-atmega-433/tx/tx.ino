@@ -8,6 +8,8 @@
 #include <avr/power.h>
 #include <avr/interrupt.h>
 
+#include "SystemStatus.h"
+
 // these define cbi and sbi, for as far they are not known yet
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
@@ -19,46 +21,7 @@ volatile boolean f_wdt = 1;
 int counter = 0;
 unsigned long sleeps = 0;
 
-int vccRead(byte us = 250) {
-    analogRead(6);
-    bitSet(ADMUX, 3);
-    delayMicroseconds(us);
-    bitSet(ADCSRA, ADSC);
-    while (bit_is_set(ADCSRA, ADSC));
-    word x = ADC;
-    return x ? (1100L * 1023) / x : -1;
-}
-
-long readVcc() {
-  // Read 1.1V reference against AVcc
-  // set the reference to Vcc and the measurement to the internal 1.1V reference
-  #if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-    ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-  #elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
-    ADMUX = _BV(MUX5) | _BV(MUX0);
-  #elif defined (__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
-    ADMUX = _BV(MUX3) | _BV(MUX2);
-  #else
-    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-  #endif  
- 
-  delay(2); // Wait for Vref to settle
-  ADCSRA |= _BV(ADSC); // Start conversion
-  while (bit_is_set(ADCSRA,ADSC)); // measuring
- 
-  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH  
-  uint8_t high = ADCH; // unlocks both
- 
-  long result = (high<<8) | low;
- 
-  result = 1125300L / result; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
-  return result; // Vcc in millivolts
-}
-
-double doubleMap(double x, double in_min, double in_max, double out_min, double out_max)
-{
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
+SystemStatus ss;
 
 void setup_watchdog(int ii) 
 {
@@ -106,7 +69,7 @@ void send_msg() {
     //unsigned long cas = millis(); // nevim proc, ale nefunguje
     // pracovní proměnná pro konverzi
     // čísla na text
-    char znaky [128];
+    char znaky [64];
     // příkazy pro konverzi čísla na text,
     // čas převedený na text je uložen do
     // proměnné casZnaky
@@ -114,12 +77,12 @@ void send_msg() {
     char *casZnaky = znaky;
 
 
-    unsigned long capVoltage = 0;//vccRead();
-    //const char *zprava_vol = "voltage: ";
+    int capVoltage = ss.getVCC();
+    const char *zprava_vol = "voltage: ";
 
-    char znaky_vol [128];
-    //snprintf(znaky_vol, sizeof(znaky_vol), "%lu", capVoltage);
-    //char *casZnaky_vol = znaky_vol;
+    char znaky_vol [64];
+    snprintf(znaky_vol, sizeof(znaky_vol), "%d", capVoltage);
+    char *casZnaky_vol = znaky_vol;
 
 
     // enable power to the 433 transmitter
@@ -150,11 +113,11 @@ void send_msg() {
     //digitalWrite(heartPin, LOW);
     delay(100);
 
-    //vw_send((uint8_t *)zprava_vol, strlen(zprava_vol));
-    //vw_wait_tx();
-    //delay(100);
-    //vw_send((uint8_t *)znaky_vol, strlen(znaky_vol));
-    //vw_wait_tx();
+    vw_send((uint8_t *)zprava_vol, strlen(zprava_vol));
+    vw_wait_tx();
+    delay(100);
+    vw_send((uint8_t *)znaky_vol, strlen(znaky_vol));
+    vw_wait_tx();
 
     // disable power to the 433 transmitter
     digitalWrite(transmitterPowerPin, LOW);
