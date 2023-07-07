@@ -14,12 +14,18 @@
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 
-int transmitterPowerPin = 4;
-int transmitterPin = 3;
+int transmitterPowerPin = 4; // (D4), pin 3
+int transmitterPin = 2; // (D2), pin 7
 int heartPin = 4;
 volatile boolean f_wdt = 1;
 int counter = 0;
 unsigned long sleeps = 0;
+
+int soilMoisturePin = 3; // (D3), pin 2
+const int openAirReading = 590;   //calibration data 1
+const int waterReading = 290;     //calibration data 2
+int moistureLevel = 0;
+int moisturePercentage = 0;
 
 SystemStatus ss;
 
@@ -47,7 +53,7 @@ void setup_watchdog(int ii)
 void system_sleep() 
 {
   cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
-  setup_watchdog(8);                   // approximately 8 seconds sleep
+  setup_watchdog(9);                   // approximately 8 seconds sleep
  
   set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
   sleep_enable();
@@ -60,63 +66,52 @@ void system_sleep()
 }
 
 void send_msg() {
-    // vytvoření proměnných pro různé
-    // druhy zpráv
-    // proměnná zprava pro poslání textu
+    // enable power to the 433 transmitter
+    digitalWrite(transmitterPowerPin, HIGH);
+
+    // send uptime
+    //=========================
     const char *zprava = "uptime: ";
-    // proměnná s načtením počtu sekund od
-    // připojení napájení
     //unsigned long cas = millis(); // nevim proc, ale nefunguje
-    // pracovní proměnná pro konverzi
-    // čísla na text
     char znaky [64];
-    // příkazy pro konverzi čísla na text,
-    // čas převedený na text je uložen do
-    // proměnné casZnaky
     snprintf(znaky, sizeof(znaky), "%lu", sleeps);
     char *casZnaky = znaky;
 
+    vw_send((uint8_t *)zprava, strlen(zprava));
+    vw_wait_tx();
+    delay(100);
+    vw_send((uint8_t *)casZnaky, strlen(casZnaky));
+    vw_wait_tx();
+    delay(100);
 
+    // send vcc voltage
+    //==========================
     int capVoltage = ss.getVCC();
     const char *zprava_vol = "voltage: ";
 
-    char znaky_vol [64];
-    snprintf(znaky_vol, sizeof(znaky_vol), "%d", capVoltage);
-    char *casZnaky_vol = znaky_vol;
-
-
-    // enable power to the 433 transmitter
-    digitalWrite(transmitterPowerPin, HIGH);
-    //delay(200000);
-    //delay(2000);
-
-    // rozsvícení LED diody při odesílání (nepovinné)
-    //digitalWrite(heartPin, HIGH);
-    // odeslání textu v proměnné zprava
-    vw_send((uint8_t *)zprava, strlen(zprava));
-    // vyčkání na odeslání celé zprávy
-    vw_wait_tx();
-    // zhasnutí LED diody při odeslání (nepovinné)
-    //digitalWrite(heartPin, LOW);
-    // pauza mezi posláním zpráv
-
-
-    delay(100);
-
-
-    // obdobný kus kódu, který opět rozsvítí LED
-    // diodu, zašle obsah proměnné casZnaky
-    // a po odeslání LED diodu zhasne
-    //digitalWrite(heartPin, HIGH);
-    vw_send((uint8_t *)casZnaky, strlen(casZnaky));
-    vw_wait_tx();
-    //digitalWrite(heartPin, LOW);
-    delay(100);
+    snprintf(znaky, sizeof(znaky), "%d", capVoltage);
+    char *casZnaky_vol = znaky;
 
     vw_send((uint8_t *)zprava_vol, strlen(zprava_vol));
     vw_wait_tx();
     delay(100);
-    vw_send((uint8_t *)znaky_vol, strlen(znaky_vol));
+    vw_send((uint8_t *)znaky, strlen(znaky));
+    vw_wait_tx();
+    delay(100);
+
+    // send moisture level
+    //===========================
+    moistureLevel = analogRead(soilMoisturePin);
+    moisturePercentage = map(moistureLevel, openAirReading, waterReading, 0, 100);
+    const char *zprava_m = "moisture: ";
+
+    snprintf(znaky, sizeof(znaky), "%d", moisturePercentage);
+    char *casZnaky_m = znaky;
+
+    vw_send((uint8_t *)zprava_m, strlen(zprava_m));
+    vw_wait_tx();
+    delay(100);
+    vw_send((uint8_t *)znaky, strlen(znaky));
     vw_wait_tx();
 
     // disable power to the 433 transmitter
@@ -129,6 +124,7 @@ void setup()
     pinMode(heartPin, OUTPUT);
     pinMode(transmitterPin, OUTPUT);
     pinMode(transmitterPowerPin, OUTPUT);
+    pinMode(soilMoisturePin, INPUT);
 
     digitalWrite(heartPin, LOW);
     digitalWrite(transmitterPin, LOW);
@@ -141,7 +137,7 @@ void setup()
     // nastavení rychlosti přenosu v bitech za sekundu
     vw_setup(1000);
 
-    setup_watchdog(8); // approximately 4 seconds sleep
+    setup_watchdog(9); // approximately 4 seconds sleep
 }
 
 void loop()
@@ -150,7 +146,7 @@ void loop()
     //    f_wdt=0;       // reset flag
     //}
 
-    if (counter > 0){ //timer to reset approx 15 min
+    if (counter > 31){ //timer to reset approx 4 min
         counter = 0;
         sleeps++;
         send_msg();
