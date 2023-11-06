@@ -1,0 +1,122 @@
+substitutions:
+  device: chromium
+
+esphome:
+  name: ${device}
+
+rp2040:
+  board: rpipicow
+  framework:
+    platform_version: https://github.com/maxgerhardt/platform-raspberrypi.git
+
+<<: !include base.yaml
+
+i2c:
+  - id: bus_a
+    sda: 4
+    scl: 5
+    scan: true
+
+pca9554:
+  - id: 'pca9554a_device'
+    i2c_id: bus_a
+    address: 0x20
+    pin_count: 16
+
+binary_sensor:
+  - platform: gpio
+    name: "${device}.btn_00"
+    pin:
+      pca9554: pca9554a_device
+      number: 0
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_01"
+    pin:
+      pca9554: pca9554a_device
+      number: 1
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_02"
+    pin:
+      pca9554: pca9554a_device
+      number: 2
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_03"
+    pin:
+      pca9554: pca9554a_device
+      number: 3
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_04"
+    pin:
+      pca9554: pca9554a_device
+      number: 4
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_05"
+    pin:
+      pca9554: pca9554a_device
+      number: 5
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_06"
+    pin:
+      pca9554: pca9554a_device
+      number: 6
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_07"
+    pin:
+      pca9554: pca9554a_device
+      number: 7
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_08"
+    pin:
+      pca9554: pca9554a_device
+      number: 8
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_09"
+    pin:
+      pca9554: pca9554a_device
+      number: 9
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_10"
+    pin:
+      pca9554: pca9554a_device
+      number: 10
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_11"
+    pin:
+      pca9554: pca9554a_device
+      number: 11
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_12"
+    pin:
+      pca9554: pca9554a_device
+      number: 12
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_13"
+    pin:
+      pca9554: pca9554a_device
+      number: 13
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_14"
+    pin:
+      pca9554: pca9554a_device
+      number: 14
+      inverted: true
+  - platform: gpio
+    name: "${device}.btn_15"
+    pin:
+      pca9554: pca9554a_device
+      number: 15
+      inverted: true
