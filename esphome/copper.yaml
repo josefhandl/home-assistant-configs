@@ -1,0 +1,34 @@
+substitutions:
+  device: copper
+
+esphome:
+  name: ${device}
+  platform: ESP8266
+  board: d1_mini
+
+<<: !include base.yaml
+
+i2c:
+  sda: D2
+  scl: D1
+  scan: true
+  id: bus_a
+
+sensor:
+  - platform: bme280
+    temperature:
+      name: "${device}.temperature"
+      device_class: "temperature"
+      oversampling: 8x
+      accuracy_decimals: 2
+    pressure:
+      name: "${device}.pressure"
+      device_class: "pressure"
+      oversampling: 8x
+    humidity:
+      name: "${device}.humidity"
+      device_class: "humidity"
+      oversampling: 8x
+    address: 0x76
+    update_interval: 15s
+
