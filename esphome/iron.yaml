@@ -30,7 +30,7 @@ sensor:
       accuracy_decimals: 2
 # senzor se hrozne zahriva sam od sebe
       filters:
-        - offset: -4.8
+        - offset: -6.8
         - sliding_window_moving_average:
             window_size: 4
             send_every: 1
