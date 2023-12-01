@@ -40,6 +40,9 @@ sensor:
 # teplomer ukazuje trochu vic, protoze je schovany v polici, ktera je ohrata od elektroniky
       filters:
         - offset: -0.8
+        - sliding_window_moving_average:
+            window_size: 4
+            send_every: 1
     pressure:
       name: "${device}.pressure"
       device_class: "pressure"

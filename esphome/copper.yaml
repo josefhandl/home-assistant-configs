@@ -21,6 +21,11 @@ sensor:
       device_class: "temperature"
       oversampling: 8x
       accuracy_decimals: 2
+      filters:
+        - offset: -4.0
+        - sliding_window_moving_average:
+            window_size: 4
+            send_every: 1
     pressure:
       name: "${device}.pressure"
       device_class: "pressure"
