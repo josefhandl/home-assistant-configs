@@ -1,0 +1,37 @@
+substitutions:
+  device: cobalt
+
+esphome:
+  name: ${device}
+  platform: ESP8266
+  board: d1_mini
+
+<<: !include base.yaml
+
+remote_transmitter:
+  pin: D2
+  carrier_duty_percent: 50%
+
+
+switch:
+
+# Projector
+# ===========
+  - platform: template
+    name: "projector.power"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFD02
+        command: 0xE21D
+  - platform: template
+    name: "projector.ok"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFD02
+        command: 0xF40B
+  - platform: template
+    name: "projector.mute"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFD02
+        command: 0xFD02
