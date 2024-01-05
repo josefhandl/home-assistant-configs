@@ -30,6 +30,18 @@ switch:
         address: 0xFD02
         command: 0xF40B
   - platform: template
+    name: "projector.volup"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFD02
+        command: 0xEE11
+  - platform: template
+    name: "projector.voldown"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFD02
+        command: 0xEA15
+  - platform: template
     name: "projector.mute"
     turn_on_action:
       remote_transmitter.transmit_nec:
