@@ -1,7 +1,10 @@
 // 433 MHz vysílač
 
 // připojení knihovny
-#include <VirtualWire.h>
+//#include <VirtualWire.h>
+#include <RCSwitch.h>
+RCSwitch mySwitch = RCSwitch();
+
 
 #include <avr/sleep.h>
 #include <avr/wdt.h>
@@ -18,7 +21,6 @@ int transmitterPowerPin = 4; // (D4), pin 3
 int transmitterPin = 2; // (D2), pin 7
 int heartPin = 4;
 volatile boolean f_wdt = 1;
-int counter = 0;
 unsigned long sleeps = 0;
 
 int soilMoisturePin = 3; // (D3), pin 2
@@ -26,6 +28,9 @@ const int openAirReading = 590;   //calibration data 1
 const int waterReading = 290;     //calibration data 2
 int moistureLevel = 0;
 int moisturePercentage = 0;
+
+int counterStart = 0; // sleeps per cycle - timer to reset (63 means approx 8 min)
+int counter = counterStart;
 
 SystemStatus ss;
 
@@ -77,11 +82,11 @@ void send_msg() {
     snprintf(znaky, sizeof(znaky), "%lu", sleeps);
     char *casZnaky = znaky;
 
-    vw_send((uint8_t *)zprava, strlen(zprava));
-    vw_wait_tx();
+    //vw_send((uint8_t *)zprava, strlen(zprava));
+    //vw_wait_tx();
     delay(100);
-    vw_send((uint8_t *)casZnaky, strlen(casZnaky));
-    vw_wait_tx();
+    //vw_send((uint8_t *)casZnaky, strlen(casZnaky));
+    //vw_wait_tx();
     delay(100);
 
     // send vcc voltage
@@ -92,11 +97,11 @@ void send_msg() {
     snprintf(znaky, sizeof(znaky), "%d", capVoltage);
     char *casZnaky_vol = znaky;
 
-    vw_send((uint8_t *)zprava_vol, strlen(zprava_vol));
-    vw_wait_tx();
+    //vw_send((uint8_t *)zprava_vol, strlen(zprava_vol));
+    //vw_wait_tx();
     delay(100);
-    vw_send((uint8_t *)znaky, strlen(znaky));
-    vw_wait_tx();
+    //vw_send((uint8_t *)znaky, strlen(znaky));
+    //vw_wait_tx();
     delay(100);
 
     // send moisture level
@@ -108,11 +113,12 @@ void send_msg() {
     snprintf(znaky, sizeof(znaky), "%d", moisturePercentage);
     char *casZnaky_m = znaky;
 
-    vw_send((uint8_t *)zprava_m, strlen(zprava_m));
-    vw_wait_tx();
+    //vw_send((uint8_t *)zprava_m, strlen(zprava_m));
+    //vw_wait_tx();
     delay(100);
-    vw_send((uint8_t *)znaky, strlen(znaky));
-    vw_wait_tx();
+    //vw_send((uint8_t *)znaky, strlen(znaky));
+    //vw_wait_tx();
+    mySwitch.send("00000000000101010001000100000000");
 
     // disable power to the 433 transmitter
     digitalWrite(transmitterPowerPin, LOW);
@@ -131,11 +137,13 @@ void setup()
     digitalWrite(transmitterPowerPin, LOW);
 
     // nastavení typu bezdrátové komunikace
-    vw_set_ptt_inverted(true);
+    //vw_set_ptt_inverted(true);
     // nastavení čísla datového pinu pro vysílač
-    vw_set_tx_pin(transmitterPin);
+    //vw_set_tx_pin(transmitterPin);
     // nastavení rychlosti přenosu v bitech za sekundu
-    vw_setup(1000);
+    //vw_setup(1000);
+    mySwitch.enableTransmit(transmitterPin);
+    mySwitch.setRepeatTransmit(6);
 
     setup_watchdog(9); // approximately 4 seconds sleep
 }
@@ -146,7 +154,7 @@ void loop()
     //    f_wdt=0;       // reset flag
     //}
 
-    if (counter > 31){ //timer to reset approx 4 min
+    if (counter > counterStart){
         counter = 0;
         sleeps++;
         send_msg();
