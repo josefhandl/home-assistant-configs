@@ -27,6 +27,26 @@ void setup()
     Serial.println("done");
 }
 
+void decimalToBinary(uint32_t num) {   
+    if (num == 0) {
+        Serial.print("0");
+        return;
+    }
+   
+   // Stores binary representation of number.
+   uint32_t binaryNum[32]; // Assuming 32 bit integer.
+   int i=0;
+   
+   for ( ;num > 0; ){
+      binaryNum[i++] = num % 2;
+      num /= 2;
+   }
+   
+   // Printing array in reverse order.
+   for (int j = i-1; j >= 0; j--)
+      Serial.print(binaryNum[j]);
+}
+
 void loop()
 {
     // vytvoření proměnných pro uložení
@@ -38,7 +58,8 @@ void loop()
     // v případě přijetí zprávy se vykoná tato if funkce
     if (mySwitch.available()) { // vw_get_message(zprava, &delkaZpravy)
         Serial.print("Received ");
-        Serial.print( mySwitch.getReceivedValue() );
+        uint32_t message = mySwitch.getReceivedValue();
+        decimalToBinary(message);
         Serial.print(" / ");
         Serial.print( mySwitch.getReceivedBitlength() );
         Serial.print("bit ");
@@ -48,5 +69,18 @@ void loop()
         Serial.println( mySwitch.getReceivedDelay() );
 
         mySwitch.resetAvailable();
+
+        uint8_t sensorId   = message >> 24 &    0b11111111; //  8 bits, 24 left
+        uint16_t sleeps    = message >> 13 & 0b11111111111; // 11 bits, 13 left
+        uint8_t capVoltage = message >>  7 &      0b111111; //  6 bits,  7 left
+        uint16_t moisture  = message       &     0b1111111; //  7 bits,  0 left
+        Serial.print("ID:");
+        Serial.println(sensorId);
+        Serial.print("Uptime:");
+        Serial.println(sleeps);
+        Serial.print("CapVoltage:");
+        Serial.println(capVoltage);
+        Serial.print("Moisture:");
+        Serial.println(moisture);
     }
 }

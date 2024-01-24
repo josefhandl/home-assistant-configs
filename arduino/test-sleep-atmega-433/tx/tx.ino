@@ -3,7 +3,7 @@
 // připojení knihovny
 //#include <VirtualWire.h>
 #include <RCSwitch.h>
-RCSwitch mySwitch = RCSwitch();
+RCSwitch rcSwitch = RCSwitch();
 
 
 #include <avr/sleep.h>
@@ -16,6 +16,8 @@ RCSwitch mySwitch = RCSwitch();
 // these define cbi and sbi, for as far they are not known yet
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+
+char sensorId = 170;
 
 int transmitterPowerPin = 4; // (D4), pin 3
 int transmitterPin = 2; // (D2), pin 7
@@ -70,7 +72,7 @@ void system_sleep()
   sbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter ON
 }
 
-void send_msg() {
+void sendMsg() {
     // enable power to the 433 transmitter
     digitalWrite(transmitterPowerPin, HIGH);
 
@@ -91,7 +93,7 @@ void send_msg() {
 
     // send vcc voltage
     //==========================
-    int capVoltage = ss.getVCC();
+    uint8_t capVoltage = ss.getVCC() / 100;
     const char *zprava_vol = "voltage: ";
 
     snprintf(znaky, sizeof(znaky), "%d", capVoltage);
@@ -118,7 +120,13 @@ void send_msg() {
     delay(100);
     //vw_send((uint8_t *)znaky, strlen(znaky));
     //vw_wait_tx();
-    mySwitch.send("00000000000101010001000100000000");
+    uint32_t message = (uint32_t)sensorId << 24; // 24 bits left
+    message |= (uint32_t)sleeps << 13; // (=11 bits), << 11 later (= 13 bits)
+    message |= (uint32_t)capVoltage << 7; // 7 bits left
+    message |= moisturePercentage & 0b1111111;
+    rcSwitch.send(message, 32);
+
+    delay(100);
 
     // disable power to the 433 transmitter
     digitalWrite(transmitterPowerPin, LOW);
@@ -136,16 +144,10 @@ void setup()
     digitalWrite(transmitterPin, LOW);
     digitalWrite(transmitterPowerPin, LOW);
 
-    // nastavení typu bezdrátové komunikace
-    //vw_set_ptt_inverted(true);
-    // nastavení čísla datového pinu pro vysílač
-    //vw_set_tx_pin(transmitterPin);
-    // nastavení rychlosti přenosu v bitech za sekundu
-    //vw_setup(1000);
-    mySwitch.enableTransmit(transmitterPin);
-    mySwitch.setRepeatTransmit(6);
+    rcSwitch.enableTransmit(transmitterPin);
+    //rcSwitch.setRepeatTransmit(6);
 
-    setup_watchdog(9); // approximately 4 seconds sleep
+    setup_watchdog(9);
 }
 
 void loop()
@@ -157,13 +159,9 @@ void loop()
     if (counter > counterStart){
         counter = 0;
         sleeps++;
-        send_msg();
+        sendMsg();
     }
 
-    // Show heartbeat (LED blink)
-    //digitalWrite(heartPin, HIGH);
-    //delay(100000);
-    //digitalWrite(heartPin, LOW);
     system_sleep();
 }
 
