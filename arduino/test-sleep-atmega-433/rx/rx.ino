@@ -1,17 +1,27 @@
 // 433 MHz Přijímač
 
 // připojení knihovny
-#include <RCSwitch.h>
+#include <RH_ASK.h>
+#ifdef RH_HAVE_HARDWARE_SPI
+#include <SPI.h> // Not actually used but needed to compile
+#endif
 
-RCSwitch mySwitch = RCSwitch();
+RH_ASK driver(747, 11, -1, -1);
 
+uint32_t a_init = 1000000;
+uint32_t a = 0;
 
 void setup()
 {
     // inicializace komunikace po sériové lince
     Serial.begin(9600);
 
-    mySwitch.enableReceive(1);
+    if (!driver.init())
+    #ifdef RH_HAVE_SERIAL
+		  Serial.println("init failed");
+    #else
+		  ;
+    #endif
 
     // nastavení typu bezdrátové komunikace
     //vw_set_ptt_inverted(true);
@@ -55,21 +65,47 @@ void loop()
     //uint8_t zprava[VW_MAX_MESSAGE_LEN];
     //uint8_t delkaZpravy = VW_MAX_MESSAGE_LEN;
 
+
+    uint8_t messageArray[RH_ASK_MAX_MESSAGE_LEN];
+    uint8_t messageArrayLen = sizeof(messageArray);
+
+    if (a == 0) {
+      Serial.print("Bad: ");
+      Serial.println(driver.rxBad());
+      Serial.print("Good: ");
+      Serial.println(driver.rxGood());
+      a = a_init;
+    }
+
+    a--;
+
     // v případě přijetí zprávy se vykoná tato if funkce
-    if (mySwitch.available()) { // vw_get_message(zprava, &delkaZpravy)
+    if (driver.available()) { // vw_get_message(zprava, &delkaZpravy)
+        Serial.println("Received ");
+
+        //driver.printBuffer("Got:", messageArray, messageArrayLen);
+/*
+
+        uint32_t message = 0;
+
+        message |= ((uint32_t)messageArray[0] << 24);
+        message |= ((uint32_t)messageArray[1] << 16);
+        message |= ((uint32_t)messageArray[2] << 8);
+        message |= (uint32_t)messageArray[3];
+
+
         Serial.print("Received ");
-        uint32_t message = mySwitch.getReceivedValue();
+        //uint32_t message = mySwitch.getReceivedValue();
         decimalToBinary(message);
         Serial.print(" / ");
-        Serial.print( mySwitch.getReceivedBitlength() );
+        //Serial.print( mySwitch.getReceivedBitlength() );
         Serial.print("bit ");
         Serial.print("Protocol: ");
-        Serial.print( mySwitch.getReceivedProtocol() );
+        //Serial.print( mySwitch.getReceivedProtocol() );
         Serial.print(" / ");
-        Serial.println( mySwitch.getReceivedDelay() );
+        //Serial.println( mySwitch.getReceivedDelay() );
 
-        mySwitch.resetAvailable();
-
+        //mySwitch.resetAvailable();
         uint8_t sensorId   = message >> 24 &    0b11111111; //  8 bits, 24 left
         uint16_t sleeps    = message >> 13 & 0b11111111111; // 11 bits, 13 left
         uint8_t capVoltage = message >>  7 &      0b111111; //  6 bits,  7 left
@@ -82,5 +118,6 @@ void loop()
         Serial.println(capVoltage);
         Serial.print("Moisture:");
         Serial.println(moisture);
+        */
     }
 }

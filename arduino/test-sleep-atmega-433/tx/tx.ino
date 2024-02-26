@@ -1,10 +1,17 @@
-// 433 MHz vysílač
+#include <RH_ASK.h>
+#ifdef RH_HAVE_HARDWARE_SPI
+#include <SPI.h> // Not actually used but needed to compile
+#endif
 
-// připojení knihovny
-//#include <VirtualWire.h>
-#include <RCSwitch.h>
-RCSwitch rcSwitch = RCSwitch();
+// Uprava v RadioHead RH_ASK.cpp
+// https://github.com/vlastahajek/RH_ASKTiny
 
+// RH_ASK on ATtiny8x uses Timer 0 to generate interrupts 8 times per bit interval.
+// Timer 0 is used by Arduino platform for millis()/micros() which is used by delay()
+// Uncomment the define RH_ASK_ATTINY_USE_TIMER1 bellow, if you want to use Timer 1 instead of Timer 0 on ATtiny
+// Timer 1 is also used by some other libraries, e.g. Servo. Alway check usage of Timer 1 before enabling this.
+//  Should be moved to header file
+//#define RH_ASK_ATTINY_USE_TIMER1
 
 #include <avr/sleep.h>
 #include <avr/wdt.h>
@@ -35,6 +42,8 @@ int counterStart = 0; // sleeps per cycle - timer to reset (63 means approx 8 mi
 int counter = counterStart;
 
 SystemStatus ss;
+
+RH_ASK driver(6000, -1, transmitterPin, -1);
 
 void setup_watchdog(int ii) 
 {
@@ -73,81 +82,61 @@ void system_sleep()
 }
 
 void sendMsg() {
-    // enable power to the 433 transmitter
+    // Enable power to the 433 transmitter
     digitalWrite(transmitterPowerPin, HIGH);
 
-    // send uptime
-    //=========================
-    const char *zprava = "uptime: ";
-    //unsigned long cas = millis(); // nevim proc, ale nefunguje
-    char znaky [64];
-    snprintf(znaky, sizeof(znaky), "%lu", sleeps);
-    char *casZnaky = znaky;
-
-    //vw_send((uint8_t *)zprava, strlen(zprava));
-    //vw_wait_tx();
-    delay(100);
-    //vw_send((uint8_t *)casZnaky, strlen(casZnaky));
-    //vw_wait_tx();
-    delay(100);
-
-    // send vcc voltage
-    //==========================
+    // Get VCC voltage (supercap)
     uint8_t capVoltage = ss.getVCC() / 100;
-    const char *zprava_vol = "voltage: ";
 
-    snprintf(znaky, sizeof(znaky), "%d", capVoltage);
-    char *casZnaky_vol = znaky;
-
-    //vw_send((uint8_t *)zprava_vol, strlen(zprava_vol));
-    //vw_wait_tx();
-    delay(100);
-    //vw_send((uint8_t *)znaky, strlen(znaky));
-    //vw_wait_tx();
-    delay(100);
-
-    // send moisture level
-    //===========================
+    // Get moisture level
     moistureLevel = analogRead(soilMoisturePin);
     moisturePercentage = map(moistureLevel, openAirReading, waterReading, 0, 100);
-    const char *zprava_m = "moisture: ";
 
-    snprintf(znaky, sizeof(znaky), "%d", moisturePercentage);
-    char *casZnaky_m = znaky;
-
-    //vw_send((uint8_t *)zprava_m, strlen(zprava_m));
-    //vw_wait_tx();
-    delay(100);
-    //vw_send((uint8_t *)znaky, strlen(znaky));
-    //vw_wait_tx();
+    // Create message
     uint32_t message = (uint32_t)sensorId << 24; // 24 bits left
     message |= (uint32_t)sleeps << 13; // (=11 bits), << 11 later (= 13 bits)
     message |= (uint32_t)capVoltage << 7; // 7 bits left
     message |= moisturePercentage & 0b1111111;
-    rcSwitch.send(message, 32);
 
-    delay(100);
+    // Split message
+    uint8_t messageArray[4];
+    messageArray[0] = message >> 24;
+    messageArray[1] = message >> 16;
+    messageArray[2] = message >>  8;
+    messageArray[3] = message;
 
-    // disable power to the 433 transmitter
+    //driver.send((uint8_t *)messageArray, 4);
+    //driver.waitPacketSent();
+    const char *msg = "hello";
+    driver.send((uint8_t *)msg, strlen(msg));
+    driver.waitPacketSent();
+
+    // Disable power to the 433 transmitter
     digitalWrite(transmitterPowerPin, LOW);
 }
-
 
 void setup()
 {
     pinMode(heartPin, OUTPUT);
-    pinMode(transmitterPin, OUTPUT);
     pinMode(transmitterPowerPin, OUTPUT);
     pinMode(soilMoisturePin, INPUT);
 
     digitalWrite(heartPin, LOW);
-    digitalWrite(transmitterPin, LOW);
     digitalWrite(transmitterPowerPin, LOW);
 
-    rcSwitch.enableTransmit(transmitterPin);
+    driver.init();
+
+    for (int i = 0; i < 10; i++) {
+      digitalWrite(transmitterPowerPin, HIGH);
+      delay(10);
+      digitalWrite(transmitterPowerPin, LOW);
+      delay(10);
+    }
+
+    //rcSwitch.enableTransmit(transmitterPin);
     //rcSwitch.setRepeatTransmit(6);
 
-    setup_watchdog(9);
+    //setup_watchdog(9);
 }
 
 void loop()
@@ -163,6 +152,13 @@ void loop()
     }
 
     system_sleep();
+
+    for (int i = 0; i < 4; i++) {
+      digitalWrite(transmitterPowerPin, HIGH);
+      delay(10);
+      digitalWrite(transmitterPowerPin, LOW);
+      delay(10);
+    }
 }
 
 // Watchdog Interrupt Service / is executed when watchdog timed out
