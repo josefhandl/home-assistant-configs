@@ -3,9 +3,8 @@
 #include <SPI.h> // Not actually used but needed to compile
 #endif
 
-// Uprava v RadioHead RH_ASK.cpp
-// https://github.com/vlastahajek/RH_ASKTiny
-
+// RH_ASK.cpp
+//--------------
 // RH_ASK on ATtiny8x uses Timer 0 to generate interrupts 8 times per bit interval.
 // Timer 0 is used by Arduino platform for millis()/micros() which is used by delay()
 // Uncomment the define RH_ASK_ATTINY_USE_TIMER1 bellow, if you want to use Timer 1 instead of Timer 0 on ATtiny
@@ -93,10 +92,11 @@ void sendMsg() {
     moisturePercentage = map(moistureLevel, openAirReading, waterReading, 0, 100);
 
     // Create message
-    uint32_t message = (uint32_t)sensorId << 24; // 24 bits left
-    message |= (uint32_t)sleeps << 13; // (=11 bits), << 11 later (= 13 bits)
-    message |= (uint32_t)capVoltage << 7; // 7 bits left
-    message |= moisturePercentage & 0b1111111;
+    uint32_t message;
+    message |= (uint32_t)sensorId   << 24; //     8 bits, 24 left
+    message |= (uint32_t)sleeps     << 13; //    11 bits, 13 left
+    message |= (uint32_t)capVoltage <<  7; //     6 bits,  7 left
+    message |= moisturePercentage & 0b1111111; // 7 bits,  0 left
 
     // Split message
     uint8_t messageArray[4];
@@ -105,10 +105,7 @@ void sendMsg() {
     messageArray[2] = message >>  8;
     messageArray[3] = message;
 
-    //driver.send((uint8_t *)messageArray, 4);
-    //driver.waitPacketSent();
-    const char *msg = "hello";
-    driver.send((uint8_t *)msg, strlen(msg));
+    driver.send((uint8_t *)messageArray, 4);
     driver.waitPacketSent();
 
     // Disable power to the 433 transmitter
@@ -132,9 +129,6 @@ void setup()
       digitalWrite(transmitterPowerPin, LOW);
       delay(10);
     }
-
-    //rcSwitch.enableTransmit(transmitterPin);
-    //rcSwitch.setRepeatTransmit(6);
 
     //setup_watchdog(9);
 }
