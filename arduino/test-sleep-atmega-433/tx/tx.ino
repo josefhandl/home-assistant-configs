@@ -46,38 +46,38 @@ RH_ASK driver(6000, -1, transmitterPin, -1);
 
 void setup_watchdog(int ii) 
 {
-  // 0=16ms, 1=32ms,2=64ms,3=128ms,4=250ms,5=500ms
-  // 6=1 sec,7=2 sec, 8=4 sec, 9= 8sec
+    // 0=16ms, 1=32ms,2=64ms,3=128ms,4=250ms,5=500ms
+    // 6=1 sec,7=2 sec, 8=4 sec, 9= 8sec
 
-  uint8_t bb;
-  if (ii > 9 ) ii=9;
-    bb=ii & 7;
-  if (ii > 7) bb|= (1<<5);
-  bb|= (1<<WDCE);
+    uint8_t bb;
+    if (ii > 9 ) ii=9;
+        bb=ii & 7;
+    if (ii > 7) bb|= (1<<5);
+        bb|= (1<<WDCE);
 
-  MCUSR &= ~(1<<WDRF);
-  // start timed sequence
-  WDTCR |= (1<<WDCE) | (1<<WDE);
-  // set new watchdog timeout value
-  WDTCR = bb;
-  WDTCR |= _BV(WDIE);
+    MCUSR &= ~(1<<WDRF);
+    // start timed sequence
+    WDTCR |= (1<<WDCE) | (1<<WDE);
+    // set new watchdog timeout value
+    WDTCR = bb;
+    WDTCR |= _BV(WDIE);
 }
 
 
 // system wakes up when watchdog is timed out
 void system_sleep() 
 {
-  cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
-  setup_watchdog(9);                   // approximately 8 seconds sleep
+    cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
+    setup_watchdog(9);                   // approximately 8 seconds sleep
  
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
-  sleep_enable();
-  sei();                               // Enable the Interrupts so the wdt can wake us up
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
+    sleep_enable();
+    sei();                               // Enable the Interrupts so the wdt can wake us up
 
-  sleep_mode();                        // System sleeps here
+    sleep_mode();                        // System sleeps here
 
-  sleep_disable();                     // System continues execution here when watchdog timed out 
-  sbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter ON
+    sleep_disable();                     // System continues execution here when watchdog timed out
+    sbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter ON
 }
 
 void sendMsg() {
@@ -105,6 +105,7 @@ void sendMsg() {
     messageArray[2] = message >>  8;
     messageArray[3] = message;
 
+    // Send message
     driver.send((uint8_t *)messageArray, 4);
     driver.waitPacketSent();
 
@@ -124,10 +125,10 @@ void setup()
     driver.init();
 
     for (int i = 0; i < 10; i++) {
-      digitalWrite(transmitterPowerPin, HIGH);
-      delay(10);
-      digitalWrite(transmitterPowerPin, LOW);
-      delay(10);
+        digitalWrite(transmitterPowerPin, HIGH);
+        delay(10);
+        digitalWrite(transmitterPowerPin, LOW);
+        delay(10);
     }
 
     //setup_watchdog(9);
@@ -148,10 +149,10 @@ void loop()
     system_sleep();
 
     for (int i = 0; i < 4; i++) {
-      digitalWrite(transmitterPowerPin, HIGH);
-      delay(10);
-      digitalWrite(transmitterPowerPin, LOW);
-      delay(10);
+        digitalWrite(transmitterPowerPin, HIGH);
+        delay(10);
+        digitalWrite(transmitterPowerPin, LOW);
+        delay(10);
     }
 }
 
