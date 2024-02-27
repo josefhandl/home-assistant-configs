@@ -25,8 +25,8 @@
 
 char sensorId = 170;
 
-int transmitterPowerPin = 4; // (D4), pin 3
-int transmitterPin = 2; // (D2), pin 7
+int txPowerPin = 4; // (D4), pin 3
+int txPin = 2; // (D2), pin 7
 int heartPin = 4;
 volatile boolean f_wdt = 1;
 unsigned long sleeps = 0;
@@ -42,12 +42,11 @@ int counter = counterStart;
 
 SystemStatus ss;
 
-RH_ASK driver(6000, -1, transmitterPin, -1);
+RH_ASK driver(6000, -1, txPin, txPowerPin);
 
-void setup_watchdog(int ii) 
-{
-    // 0=16ms, 1=32ms,2=64ms,3=128ms,4=250ms,5=500ms
-    // 6=1 sec,7=2 sec, 8=4 sec, 9= 8sec
+void setup_watchdog(int ii) {
+    // 0=16ms, 1=32ms, 2=64ms, 3=128ms, 4=250ms, 5=500ms
+    // 6=1sec, 7=2sec, 8=4sec, 9=8sec
 
     uint8_t bb;
     if (ii > 9 ) ii=9;
@@ -65,11 +64,10 @@ void setup_watchdog(int ii)
 
 
 // system wakes up when watchdog is timed out
-void system_sleep() 
-{
+void system_sleep() {
     cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
     setup_watchdog(9);                   // approximately 8 seconds sleep
- 
+
     set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
     sleep_enable();
     sei();                               // Enable the Interrupts so the wdt can wake us up
@@ -81,9 +79,6 @@ void system_sleep()
 }
 
 void sendMsg() {
-    // Enable power to the 433 transmitter
-    digitalWrite(transmitterPowerPin, HIGH);
-
     // Get VCC voltage (supercap)
     uint8_t capVoltage = ss.getVCC() / 100;
 
@@ -108,34 +103,20 @@ void sendMsg() {
     // Send message
     driver.send((uint8_t *)messageArray, 4);
     driver.waitPacketSent();
-
-    // Disable power to the 433 transmitter
-    digitalWrite(transmitterPowerPin, LOW);
 }
 
-void setup()
-{
+void setup() {
     pinMode(heartPin, OUTPUT);
-    pinMode(transmitterPowerPin, OUTPUT);
     pinMode(soilMoisturePin, INPUT);
 
     digitalWrite(heartPin, LOW);
-    digitalWrite(transmitterPowerPin, LOW);
 
     driver.init();
 
-    for (int i = 0; i < 10; i++) {
-        digitalWrite(transmitterPowerPin, HIGH);
-        delay(10);
-        digitalWrite(transmitterPowerPin, LOW);
-        delay(10);
-    }
-
-    //setup_watchdog(9);
+    setup_watchdog(9);
 }
 
-void loop()
-{
+void loop() {
     //if (f_wdt==1) {  // wait for timed out watchdog / flag is set when a watchdog timeout occurs
     //    f_wdt=0;       // reset flag
     //}
@@ -147,13 +128,6 @@ void loop()
     }
 
     system_sleep();
-
-    for (int i = 0; i < 4; i++) {
-        digitalWrite(transmitterPowerPin, HIGH);
-        delay(10);
-        digitalWrite(transmitterPowerPin, LOW);
-        delay(10);
-    }
 }
 
 // Watchdog Interrupt Service / is executed when watchdog timed out
