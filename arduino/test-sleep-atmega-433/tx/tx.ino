@@ -3,6 +3,10 @@
 #include <SPI.h> // Not actually used but needed to compile
 #endif
 
+// RH_ASK.h
+//--------------
+// Caution: the default internal clock speed on an ATTiny85 is 1MHz. You MUST set the internal clock speed to 8MHz.
+
 // RH_ASK.cpp
 //--------------
 // RH_ASK on ATtiny8x uses Timer 0 to generate interrupts 8 times per bit interval.
@@ -11,6 +15,7 @@
 // Timer 1 is also used by some other libraries, e.g. Servo. Alway check usage of Timer 1 before enabling this.
 //  Should be moved to header file
 //#define RH_ASK_ATTINY_USE_TIMER1
+
 
 #include <avr/sleep.h>
 #include <avr/wdt.h>
@@ -23,59 +28,90 @@
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 
-char sensorId = 170;
+//                 +-\/-+
+// Ain0 (D5) PB5  1|    |8  Vcc
+// Ain3 (D3) PB3  2|    |7  PB2 (D2) Ain1
+// Ain2 (D4) PB4  3|    |6  PB1 (D1) pwm1
+//           GND  4|    |5  PB0 (D0) pwm0
+//                 +----+
+//
+const uint8_t pin_tx      = 2; // (D2), pin 7
+const uint8_t pin_txPower = 4;
+const uint8_t pin_hearth  = 4;
+const uint8_t pin_soilMoisture = 3;
 
-int txPowerPin = 4; // (D4), pin 3
-int txPin = 2; // (D2), pin 7
-int heartPin = 4;
-volatile boolean f_wdt = 1;
-unsigned long sleeps = 0;
+// TODO will be randomly generated and stored in EEPROM
+const char sensorId = 170;
 
-int soilMoisturePin = 3; // (D3), pin 2
-const int openAirReading = 590;   //calibration data 1
-const int waterReading = 290;     //calibration data 2
-int moistureLevel = 0;
-int moisturePercentage = 0;
+uint16_t cycles = 0;
 
-int counterStart = 0; // sleeps per cycle - timer to reset (63 means approx 8 min)
-int counter = counterStart;
+const uint8_t openAirReading = 590; //calibration data 1
+const uint8_t waterReading = 290;   //calibration data 2
+uint8_t moistureLevel = 0;
+uint8_t moisturePercentage = 0;
+
+// Watchdog Timer Prescaler
+// Defines values for the WDT to timeout
+// 0=16ms, 1=32ms, 2=64ms, 3=128ms, 4=250ms, 5=500ms
+// 6=1sec, 7=2sec, 8=4sec, 9=8sec
+const uint8_t wdp = 9;
+
+// Sleeps per cycle (s/c) - timer to reset 
+// (  0 means  1 s/c - approx 8 sec)
+// ( 63 means 64 s/c - approx 8.5 min)
+// (899 means approx 2 hours)
+// ...for maximum watchdog time (9=8sec)
+uint16_t sleepCounterRequired = 0;
+uint16_t sleepCounter = sleepCounterRequired;
 
 SystemStatus ss;
+RH_ASK rh433(6000, -1, pin_tx, pin_txPower);
 
-RH_ASK driver(6000, -1, txPin, txPowerPin);
+void setup_watchdog() {
+    // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf
 
-void setup_watchdog(int ii) {
-    // 0=16ms, 1=32ms, 2=64ms, 3=128ms, 4=250ms, 5=500ms
-    // 6=1sec, 7=2sec, 8=4sec, 9=8sec
+    // MCUSR - MCU Status Register
+    // -----
+    // WDRF  - Watchdog System Reset Flag
 
-    uint8_t bb;
-    if (ii > 9 ) ii=9;
-        bb=ii & 7;
-    if (ii > 7) bb|= (1<<5);
-        bb|= (1<<WDCE);
+    // WDTCR - Watchdog Timer Control Register
+    // -----
+    // WDIE  - Watchdog Interrupt Enable
+    // WDCE  - Watchdog Change Enable
+    // WDE   - Watchdog System Reset Enable
+    // WDP   - Watchdog Timer Prescaler
 
-    MCUSR &= ~(1<<WDRF);
-    // start timed sequence
-    WDTCR |= (1<<WDCE) | (1<<WDE);
-    // set new watchdog timeout value
-    WDTCR = bb;
+    // Clear the WDRF in MCUSR, allows to set WDE
+    MCUSR &= ~_BV(WDRF);
+    // Setting WDCE in WDTCR allows updates for 4 clock cycles
+    // Needed to change WDE or WDP
+    WDTCR |= _BV(WDCE) | _BV(WDE);
+    // Set new watchdog timeout value (WDP) in WDTCR
+    WDTCR = (1<<WDP3) | (0<<WDP2) | (0<<WDP1) | (1<<WDP0);;
+    // Set WDIE in WDTCR to allows interrupts
     WDTCR |= _BV(WDIE);
 }
 
-
 // system wakes up when watchdog is timed out
 void system_sleep() {
-    cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
-    setup_watchdog(9);                   // approximately 8 seconds sleep
+    // Switch ADC off
+    cbi(ADCSRA, ADEN);
 
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
+    setup_watchdog();
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+
+    // Enable sleep
     sleep_enable();
-    sei();                               // Enable the Interrupts so the wdt can wake us up
+    // Enter sleep mode and wait for INT0
+    sleep_mode();
 
-    sleep_mode();                        // System sleeps here
+    // ----- MCU is sleeping -----
 
-    sleep_disable();                     // System continues execution here when watchdog timed out
-    sbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter ON
+    // Disable sleep after wakeup
+    sleep_disable();
+
+    // Switch ADC on
+    sbi(ADCSRA, ADEN);
 }
 
 void sendMsg() {
@@ -83,13 +119,13 @@ void sendMsg() {
     uint8_t capVoltage = ss.getVCC() / 100;
 
     // Get moisture level
-    moistureLevel = analogRead(soilMoisturePin);
+    moistureLevel = analogRead(pin_soilMoisture);
     moisturePercentage = map(moistureLevel, openAirReading, waterReading, 0, 100);
 
     // Create message
     uint32_t message;
     message |= (uint32_t)sensorId   << 24; //     8 bits, 24 left
-    message |= (uint32_t)sleeps     << 13; //    11 bits, 13 left
+    message |= (uint32_t)cycles     << 13; //    11 bits, 13 left
     message |= (uint32_t)capVoltage <<  7; //     6 bits,  7 left
     message |= moisturePercentage & 0b1111111; // 7 bits,  0 left
 
@@ -101,37 +137,35 @@ void sendMsg() {
     messageArray[3] = message;
 
     // Send message
-    driver.send((uint8_t *)messageArray, 4);
-    driver.waitPacketSent();
+    rh433.send((uint8_t *)messageArray, 4);
+    rh433.waitPacketSent();
+}
+
+// Watchdog Interrupt Service - is executed when watchdog timed out
+ISR(WDT_vect) {
+    sleepCounter++;
 }
 
 void setup() {
-    pinMode(heartPin, OUTPUT);
-    pinMode(soilMoisturePin, INPUT);
+    pinMode(pin_hearth, OUTPUT);
+    pinMode(pin_soilMoisture, INPUT);
 
-    digitalWrite(heartPin, LOW);
+    digitalWrite(pin_hearth, LOW);
 
-    driver.init();
+    // Enable interrupts so the WDT can wake us up
+    sei();
 
-    setup_watchdog(9);
+    rh433.init();
+
+    setup_watchdog();
 }
 
 void loop() {
-    //if (f_wdt==1) {  // wait for timed out watchdog / flag is set when a watchdog timeout occurs
-    //    f_wdt=0;       // reset flag
-    //}
-
-    if (counter > counterStart){
-        counter = 0;
-        sleeps++;
+    if (sleepCounter > sleepCounterRequired){
+        sleepCounter = 0;
+        cycles++;
         sendMsg();
     }
 
     system_sleep();
-}
-
-// Watchdog Interrupt Service / is executed when watchdog timed out
-ISR(WDT_vect) {
-    counter++;
-    f_wdt=1;  // set global flag
 }
