@@ -4,7 +4,11 @@
 #include <SPI.h> // Not actually used but needed to compile
 #endif
 
-RH_ASK driver(747, 11, -1, -1);
+// Atmega328p (for 6000 tx on attiny85 8 MHz)
+//RH_ASK driver(747, 11, -1, -1);
+
+// RP2040 (for 6000 tx on attiny85 8 MHz)
+RH_ASK driver(738, 2, -1, -1);
 
 void setup()
 {
