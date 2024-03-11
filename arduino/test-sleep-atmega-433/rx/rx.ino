@@ -4,6 +4,18 @@
 #include <SPI.h> // Not actually used but needed to compile
 #endif
 
+#include <WiFi.h>
+
+#ifndef STASSID
+#define STASSID ""
+#define STAPSK ""
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+WiFiMulti multi;
+
 // Atmega328p (for 6000 tx on attiny85 8 MHz)
 //RH_ASK driver(747, 11, -1, -1);
 
@@ -25,6 +37,23 @@ void setup()
     Serial.print("booting....");
     delay(100);
     Serial.println("done");
+
+    Serial.print("Connecting to ");
+    Serial.println(ssid);
+
+    multi.addAP(ssid, password);
+
+    if (multi.run() != WL_CONNECTED) {
+      Serial.println("Unable to connect to network, rebooting in 10 seconds...");
+      delay(10000);
+      rp2040.reboot();
+    }
+
+    Serial.println("WiFi connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+
+    Serial.println("-------------------------");
 }
 
 void decimalToBinary(uint32_t num) {   
