@@ -5,6 +5,7 @@
 #endif
 
 #include <WiFi.h>
+#include <WebServer.h>
 
 #ifndef STASSID
 #define STASSID ""
@@ -15,6 +16,7 @@ const char* ssid = STASSID;
 const char* password = STAPSK;
 
 WiFiMulti multi;
+WebServer server(80);
 
 // Atmega328p (for 6000 tx on attiny85 8 MHz)
 //RH_ASK driver(747, 11, -1, -1);
@@ -22,8 +24,45 @@ WiFiMulti multi;
 // RP2040 (for 6000 tx on attiny85 8 MHz)
 RH_ASK driver(738, 2, -1, -1);
 
+
+const uint8_t pin_infoLed = 7;
+
+
+uint8_t messageArray[RH_ASK_MAX_MESSAGE_LEN];
+uint8_t messageArrayLen = sizeof(messageArray);
+
+
+
+void blink(const uint8_t count) {
+    for (uint8_t i = 0; i < count; ++i) {
+        digitalWrite(pin_infoLed, HIGH);
+        delay(100);
+        digitalWrite(pin_infoLed, LOW);
+        delay(100);
+    }
+}
+
+uint32_t messageapi = 0;
+
+void handleRoot() {
+  server.send(200, "text/plain", "hello from pico w!\n");
+  blink(1);
+}
+
+void handleSensors() {
+  char snum[33];
+  itoa(messageapi, snum, 2);
+  server.send(200, "text/plain", snum);
+  blink(1);
+}
+
+
 void setup()
 {
+    pinMode(pin_infoLed, OUTPUT);
+    digitalWrite(pin_infoLed, HIGH);
+
+
     Serial.begin(9600);
 
     if (!driver.init())
@@ -54,6 +93,12 @@ void setup()
     Serial.println(WiFi.localIP());
 
     Serial.println("-------------------------");
+
+    server.on("/", handleRoot);
+    server.on("/sensors", handleSensors);
+    server.begin();
+
+    digitalWrite(pin_infoLed, LOW);
 }
 
 void decimalToBinary(uint32_t num) {   
@@ -78,12 +123,7 @@ void decimalToBinary(uint32_t num) {
     Serial.println();
 }
 
-void loop()
-{
-    uint8_t messageArray[RH_ASK_MAX_MESSAGE_LEN];
-    uint8_t messageArrayLen = sizeof(messageArray);
-
-    if (driver.recv(messageArray, &messageArrayLen)) {
+void parseMessage() {
         uint32_t message = 0;
 
         message |= ((uint32_t)messageArray[0] << 24);
@@ -92,7 +132,11 @@ void loop()
         message |= (uint32_t)messageArray[3];
 
         Serial.print("Received ");
+        Serial.print(message);
+        Serial.print(" ");
         decimalToBinary(message);
+
+        messageapi = message;
 
         uint8_t sensorId   = message >> 24 &    0b11111111; //  8 bits, 24 left
         uint16_t sleeps    = message >> 13 & 0b11111111111; // 11 bits, 13 left
@@ -106,5 +150,14 @@ void loop()
         Serial.println(capVoltage);
         Serial.print("Moisture: ");
         Serial.println(moisture);
+}
+
+void loop()
+{
+    server.handleClient();
+
+    if (driver.recv(messageArray, &messageArrayLen)) {
+        parseMessage();
+        blink(2);
     }
 }
