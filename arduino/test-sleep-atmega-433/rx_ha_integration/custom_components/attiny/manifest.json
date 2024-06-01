@@ -1,0 +1,14 @@
+{
+  "domain": "attiny",
+  "name": "attiny",
+  "version": "0.1.0",
+  "codeowners": ["@josefhandl"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://www.home-assistant.io/integrations/attiny",
+  "homekit": {},
+  "iot_class": "local_polling",
+  "requirements": [],
+  "ssdp": [],
+  "zeroconf": []
+}
