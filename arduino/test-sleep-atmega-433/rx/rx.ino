@@ -28,9 +28,17 @@ RH_ASK driver(738, 2, -1, -1);
 const uint8_t pin_infoLed = 7;
 
 
-uint8_t messageArray[RH_ASK_MAX_MESSAGE_LEN];
-uint8_t messageArrayLen = sizeof(messageArray);
+uint8_t messageFragments[RH_ASK_MAX_MESSAGE_LEN];
+uint8_t messageFragmentsLen = sizeof(messageFragments);
 
+struct Sensor {
+    uint16_t sleeps = 0;
+    uint8_t capVoltage = 0;
+    uint16_t moisture = 0;
+};
+
+
+Sensor sensorsData[256];
 
 
 void blink(const uint8_t count) {
@@ -50,10 +58,33 @@ void handleRoot() {
 }
 
 void handleSensors() {
-  char snum[33];
-  itoa(messageapi, snum, 2);
-  server.send(200, "text/plain", snum);
-  blink(1);
+    char result[1024];
+    strcpy(result, "{\"sensors\":[");
+    bool firstSensor = true;
+    for (uint16_t sensorId = 0; sensorId < 256; ++sensorId) {
+        if (sensorsData[sensorId].sleeps > 0) {
+            Sensor & sensor = sensorsData[sensorId];
+            char sensorResult[256];
+            snprintf(sensorResult, sizeof(sensorResult), "{\"id\":%u,\"sleeps\":%u,\"capVoltage\":%u,\"moisture\":%u}", sensorId, sensor.sleeps, sensor.capVoltage, sensor.moisture);
+            if (!firstSensor) {
+                strcat(result, ",");  // Add comma before each sensor data except the first one
+            }
+
+            // Ensure concatenation does not overflow the buffer
+            if (strlen(result) + strlen(sensorResult) < sizeof(result)) {
+                strcat(result, sensorResult);
+                firstSensor = false;
+            } else {
+                // Handle buffer overflow: you can log an error or handle it as needed
+                blink(5);  // Indicate an error with blinking
+                return;
+            }
+        }
+    }
+    strcat(result, "]}");
+
+    blink(1);
+    server.send(200, "application/json", result);
 }
 
 
@@ -123,41 +154,45 @@ void decimalToBinary(uint32_t num) {
     Serial.println();
 }
 
-void parseMessage() {
-        uint32_t message = 0;
-
-        message |= ((uint32_t)messageArray[0] << 24);
-        message |= ((uint32_t)messageArray[1] << 16);
-        message |= ((uint32_t)messageArray[2] << 8);
-        message |= (uint32_t)messageArray[3];
-
-        Serial.print("Received ");
-        Serial.print(message);
-        Serial.print(" ");
-        decimalToBinary(message);
-
-        messageapi = message;
-
-        uint8_t sensorId   = message >> 24 &    0b11111111; //  8 bits, 24 left
-        uint16_t sleeps    = message >> 13 & 0b11111111111; // 11 bits, 13 left
-        uint8_t capVoltage = message >>  7 &      0b111111; //  6 bits,  7 left
-        uint16_t moisture  = message       &     0b1111111; //  7 bits,  0 left
-        Serial.print("ID: ");
-        Serial.println(sensorId);
-        Serial.print("Uptime: ");
-        Serial.println(sleeps);
-        Serial.print("CapVoltage: ");
-        Serial.println(capVoltage);
-        Serial.print("Moisture: ");
-        Serial.println(moisture);
+void printSerialSensor(const uint8_t sensorId, const uint32_t fullMessage) {
+    Serial.print("Received ");
+    Serial.print(fullMessage);
+    Serial.print(" ");
+    decimalToBinary(fullMessage);
+    Serial.print("ID: ");
+    Serial.println(sensorId);
+    Serial.print("Uptime: ");
+    Serial.println(sensorsData[sensorId].sleeps);
+    Serial.print("CapVoltage: ");
+    Serial.println(sensorsData[sensorId].capVoltage);
+    Serial.print("Moisture: ");
+    Serial.println(sensorsData[sensorId].moisture);
 }
 
 void loop()
 {
     server.handleClient();
 
-    if (driver.recv(messageArray, &messageArrayLen)) {
-        parseMessage();
+    if (driver.recv(messageFragments, &messageFragmentsLen)) {
+        // Join fragments to the whole message
+        uint32_t message = 0;
+        message |= ((uint32_t)messageFragments[0] << 24);
+        message |= ((uint32_t)messageFragments[1] << 16);
+        message |= ((uint32_t)messageFragments[2] << 8);
+        message |= (uint32_t)messageFragments[3];
+
+        // Get sensor ID and the corresponding Sensor struct
+        uint8_t sensorId  = message >> 24 &    0b11111111; //  8 bits, 24 left
+        Sensor & sensor = sensorsData[sensorId];
+
+        // Parse rest of of the message and save
+        sensor.sleeps     = message >> 13 & 0b11111111111; // 11 bits, 13 left
+        sensor.capVoltage = message >>  7 &      0b111111; //  6 bits,  7 left
+        sensor.moisture   = message       &     0b1111111; //  7 bits,  0 left
+
         blink(2);
+
+        // Print to serial console
+        printSerialSensor(sensorId, message);
     }
 }
