@@ -69,8 +69,8 @@ class AttinyCyclesSensor(AttinySensor):
 
     _attr_name = "Attiny cycles"
     _name_template = "Attiny {} cycles"
-    _attr_native_unit_of_measurement = TEMP_CELSIUS
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    #_attr_native_unit_of_measurement = TEMP_CELSIUS
+    #_attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_state_class = SensorStateClass.MEASUREMENT
     _sensor_posfix = "cycles"
 
@@ -88,9 +88,9 @@ class AttinyCapVoltageSensor(AttinySensor):
 
     _attr_name = "Attiny capVoltage"
     _name_template = "Attiny {} capVoltage"
-    _attr_native_unit_of_measurement = TEMP_CELSIUS
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "V"
+    _attr_device_class = SensorDeviceClass.VOLTAGE
+    _attr_state_class = SensorStateClass.TOTAL
     _sensor_posfix = "capVoltage"
 
     @callback
@@ -107,8 +107,8 @@ class AttinyMoistureSensor(AttinySensor):
 
     _attr_name = "Attiny moisture"
     _name_template = "Attiny {} moisture"
-    _attr_native_unit_of_measurement = TEMP_CELSIUS
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_native_unit_of_measurement = "%"
+    _attr_device_class = SensorDeviceClass.MOISTURE
     _attr_state_class = SensorStateClass.MEASUREMENT
     _sensor_posfix = "moisture"
 
