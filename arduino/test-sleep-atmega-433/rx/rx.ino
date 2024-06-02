@@ -25,7 +25,14 @@ WebServer server(80);
 RH_ASK driver(738, 2, -1, -1);
 
 
-const uint8_t pin_infoLed = 7;
+const uint8_t pin_ledRed   = 7;
+const uint8_t pin_ledGreen = 8;
+const uint8_t pin_ledBlue  = 9;
+const uint8_t pin_ledArray[] = {pin_ledRed, pin_ledGreen, pin_ledBlue};
+
+const uint8_t color_orange[] = {255, 40, 0};
+const uint8_t color_purple[] = {255, 0, 40};
+const uint8_t color_cyan[]   = {0, 255, 20};
 
 
 uint8_t messageFragments[RH_ASK_MAX_MESSAGE_LEN];
@@ -41,20 +48,30 @@ struct Sensor {
 Sensor sensorsData[256];
 
 
-void blink(const uint8_t count) {
+void ledOn(const uint8_t * color) {
+    analogWrite(pin_ledRed,   color[0]);
+    analogWrite(pin_ledGreen, color[1]);
+    analogWrite(pin_ledBlue,  color[2]);
+}
+
+void ledOff() {
+    digitalWrite(pin_ledRed,   LOW);
+    digitalWrite(pin_ledGreen, LOW);
+    digitalWrite(pin_ledBlue,  LOW);
+}
+
+void blink(const uint8_t count, const uint8_t * color) {
     for (uint8_t i = 0; i < count; ++i) {
-        digitalWrite(pin_infoLed, HIGH);
+        ledOn(color);
         delay(100);
-        digitalWrite(pin_infoLed, LOW);
+        ledOff();
         delay(100);
     }
 }
 
-uint32_t messageapi = 0;
-
 void handleRoot() {
-  server.send(200, "text/plain", "hello from pico w!\n");
-  blink(1);
+    server.send(200, "text/plain", "hello from pico w!\n");
+    blink(1, color_orange);
 }
 
 void handleSensors() {
@@ -76,22 +93,27 @@ void handleSensors() {
                 firstSensor = false;
             } else {
                 // Handle buffer overflow: you can log an error or handle it as needed
-                blink(5);  // Indicate an error with blinking
+                blink(5, color_orange);  // Indicate an error with blinking
                 return;
             }
         }
     }
     strcat(result, "]}");
 
-    blink(1);
+    blink(1, color_orange);
     server.send(200, "application/json", result);
 }
 
 
 void setup()
 {
-    pinMode(pin_infoLed, OUTPUT);
-    digitalWrite(pin_infoLed, HIGH);
+    // Init LEDs
+    pinMode(pin_ledRed,   OUTPUT);
+    pinMode(pin_ledGreen, OUTPUT);
+    pinMode(pin_ledBlue,  OUTPUT);
+
+    // Turn boot color on
+    ledOn(color_cyan);
 
 
     Serial.begin(9600);
@@ -129,7 +151,7 @@ void setup()
     server.on("/sensors", handleSensors);
     server.begin();
 
-    digitalWrite(pin_infoLed, LOW);
+    ledOff();
 }
 
 void decimalToBinary(uint32_t num) {   
@@ -190,7 +212,7 @@ void loop()
         sensor.capVoltage = message >>  7 &      0b111111; //  6 bits,  7 left
         sensor.moisture   = message       &     0b1111111; //  7 bits,  0 left
 
-        blink(2);
+        blink(2, color_purple);
 
         // Print to serial console
         printSerialSensor(sensorId, message);
