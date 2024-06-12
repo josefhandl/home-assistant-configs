@@ -101,6 +101,11 @@ void system_sleep() {
     setup_watchdog();
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
+    // Enable pin change interrupts
+    sbi(GIMSK, PCIE);
+    // Enable PB3 pin interrupt
+    sbi(PCMSK, PCINT3);
+
     // Enable sleep
     sleep_enable();
     // Enter sleep mode and wait for INT0
@@ -110,6 +115,9 @@ void system_sleep() {
 
     // Disable sleep after wakeup
     sleep_disable();
+
+    // Diable PB3 pin interrupt
+    cbi(PCMSK, PCINT3);
 
     // Switch ADC on
     sbi(ADCSRA, ADEN);
@@ -147,11 +155,17 @@ ISR(WDT_vect) {
     sleepCounter++;
 }
 
-void setup() {
-    pinMode(pin_hearth, OUTPUT);
-    pinMode(pin_soilMoisture, INPUT);
+// Pin Change Interrupt Service - is executed when pin change is detected
+ISR(PCINT0_vect) {
+    // Set the sleepCounter to the value required to send the message
+    // This will cause the message will be send immediately
+    sleepCounter = sleepCounterRequired + 1;
+}
 
-    digitalWrite(pin_hearth, LOW);
+void setup() {
+    pinMode(pin_soilMoisture, INPUT);
+    pinMode(pin_button, INPUT);
+    digitalWrite(pin_button, HIGH);
 
     // Enable interrupts so the WDT can wake us up
     sei();
