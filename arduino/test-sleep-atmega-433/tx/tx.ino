@@ -35,10 +35,10 @@
 //           GND  4|    |5  PB0 (D0) pwm0
 //                 +----+
 //
-const uint8_t pin_tx      = 2; // (D2), pin 7
-const uint8_t pin_txPower = 4;
-const uint8_t pin_hearth  = 4;
-const uint8_t pin_soilMoisture = 3;
+const uint8_t pin_tx           = 2; // (D2), pin 7
+const uint8_t pin_txPower      = 4; // pin 3
+const uint8_t pin_soilMoisture = 1; // pin 6
+const uint8_t pin_button       = 3; // pin 2
 
 // TODO will be randomly generated and stored in EEPROM
 const char sensorId = 170;
@@ -49,12 +49,6 @@ const uint8_t openAirReading = 590; //calibration data 1
 const uint8_t waterReading = 290;   //calibration data 2
 uint8_t moistureLevel = 0;
 uint8_t moisturePercentage = 0;
-
-// Watchdog Timer Prescaler
-// Defines values for the WDT to timeout
-// 0=16ms, 1=32ms, 2=64ms, 3=128ms, 4=250ms, 5=500ms
-// 6=1sec, 7=2sec, 8=4sec, 9=8sec
-const uint8_t wdp = 9;
 
 // Sleeps per cycle (s/c) - timer to reset 
 // (  0 means  1 s/c - approx 8 sec)
@@ -83,11 +77,18 @@ void setup_watchdog() {
 
     // Clear the WDRF in MCUSR, allows to set WDE
     MCUSR &= ~_BV(WDRF);
+
     // Setting WDCE in WDTCR allows updates for 4 clock cycles
     // Needed to change WDE or WDP
     WDTCR |= _BV(WDCE) | _BV(WDE);
-    // Set new watchdog timeout value (WDP) in WDTCR
+
+    // Set new watchdog timeout value (WDP (Watchdog Timer Prescaler)) in WDTCR
+    // Defines values for the WDT to timeout
+    // 0=16ms, 1=32ms, 2=64ms, 3=128ms, 4=250ms, 5=500ms
+    // 6=1sec, 7=2sec, 8=4sec, 9=8sec
+    // (Selected hard-coded value is 9)
     WDTCR = (1<<WDP3) | (0<<WDP2) | (0<<WDP1) | (1<<WDP0);;
+
     // Set WDIE in WDTCR to allows interrupts
     WDTCR |= _BV(WDIE);
 }
