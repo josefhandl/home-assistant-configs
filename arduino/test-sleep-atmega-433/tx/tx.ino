@@ -21,8 +21,14 @@
 #include <avr/wdt.h>
 #include <avr/power.h>
 #include <avr/interrupt.h>
+#include <TinyWireM.h>
 
 #include "SystemStatus.h"
+#include "TinyBMP280.h"
+
+using namespace tbmp;
+
+tbmp::TinyBMP280 bmp;
 
 // these define cbi and sbi, for as far they are not known yet
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
@@ -30,15 +36,15 @@
 
 //                 +-\/-+
 // Ain0 (D5) PB5  1|    |8  Vcc
-// Ain3 (D3) PB3  2|    |7  PB2 (D2) Ain1
+// Ain3 (D3) PB3  2|    |7  PB2 (D2) Ain1, SCL
 // Ain2 (D4) PB4  3|    |6  PB1 (D1) pwm1
-//           GND  4|    |5  PB0 (D0) pwm0
+//           GND  4|    |5  PB0 (D0) pwm0, SDA
 //                 +----+
 //
-const uint8_t pin_tx           = 2; // (D2), pin 7
+const uint8_t pin_tx           = 3; // (D3), pin 2
 const uint8_t pin_txPower      = 4; // pin 3
-const uint8_t pin_soilMoisture = 1; // pin 6
-const uint8_t pin_button       = 3; // pin 2
+const uint8_t pin_button       = 1; // pin 6
+const uint8_t pin_sensorPower  = 5; // pin 1
 
 // TODO will be randomly generated and stored in EEPROM
 const char sensorId = 170;
@@ -47,8 +53,9 @@ uint16_t cycles = 0;
 
 const uint8_t openAirReading = 590; //calibration data 1
 const uint8_t waterReading = 290;   //calibration data 2
-uint8_t moistureLevel = 0;
-uint8_t moisturePercentage = 0;
+//uint8_t moistureLevel = 0;
+//uint8_t moisturePercentage = 0;
+int8_t temperature = 0;
 
 // Sleeps per cycle (s/c) - timer to reset 
 // (  0 means  1 s/c - approx 8 sec)
@@ -103,8 +110,8 @@ void system_sleep() {
 
     // Enable pin change interrupts
     sbi(GIMSK, PCIE);
-    // Enable PB3 pin interrupt
-    sbi(PCMSK, PCINT3);
+    // Enable PB1 pin interrupt
+    sbi(PCMSK, PCINT1);
 
     // Enable sleep
     sleep_enable();
@@ -116,8 +123,8 @@ void system_sleep() {
     // Disable sleep after wakeup
     sleep_disable();
 
-    // Diable PB3 pin interrupt
-    cbi(PCMSK, PCINT3);
+    // Diable PB1 pin interrupt
+    cbi(PCMSK, PCINT1);
 
     // Switch ADC on
     sbi(ADCSRA, ADEN);
@@ -128,15 +135,22 @@ void sendMsg() {
     uint8_t capVoltage = ss.getVCC() / 100;
 
     // Get moisture level
-    moistureLevel = analogRead(pin_soilMoisture);
-    moisturePercentage = map(moistureLevel, openAirReading, waterReading, 0, 100);
+    //moistureLevel = analogRead(pin_soilMoisture);
+    //moisturePercentage = map(moistureLevel, openAirReading, waterReading, 0, 100);
+
+    // Get temperature
+    digitalWrite(pin_txPower, HIGH);
+    delay(100);
+    bmp.begin(0x76);
+    temperature = (int8_t)(bmp.readIntTemperature() / 100);
+    temperature = (int8_t)(bmp.readIntTemperature() / 100);
 
     // Create message
     uint32_t message;
     message |= (uint32_t)sensorId   << 24; //     8 bits, 24 left
     message |= (uint32_t)cycles     << 13; //    11 bits, 13 left
     message |= (uint32_t)capVoltage <<  7; //     6 bits,  7 left
-    message |= moisturePercentage & 0b1111111; // 7 bits,  0 left
+    message |= temperature & 0b1111111; // 7 bits,  0 left
 
     // Split message
     uint8_t messageArray[4];
@@ -163,9 +177,12 @@ ISR(PCINT0_vect) {
 }
 
 void setup() {
-    pinMode(pin_soilMoisture, INPUT);
     pinMode(pin_button, INPUT);
+    pinMode(pin_sensorPower, OUTPUT);
     digitalWrite(pin_button, HIGH);
+    digitalWrite(pin_sensorPower, LOW);
+
+    TinyWireM.begin();
 
     // Enable interrupts so the WDT can wake us up
     sei();
