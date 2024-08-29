@@ -42,6 +42,7 @@ struct Sensor {
     uint16_t sleeps = 0;
     uint8_t capVoltage = 0;
     uint16_t moisture = 0;
+    int8_t rssi = 0;
 };
 
 
@@ -82,7 +83,7 @@ void handleSensors() {
         if (sensorsData[sensorId].sleeps > 0) {
             Sensor & sensor = sensorsData[sensorId];
             char sensorResult[256];
-            snprintf(sensorResult, sizeof(sensorResult), "{\"id\":%u,\"sleeps\":%u,\"capVoltage\":%u,\"moisture\":%u}", sensorId, sensor.sleeps, sensor.capVoltage, sensor.moisture);
+            snprintf(sensorResult, sizeof(sensorResult), "{\"id\":%u,\"sleeps\":%u,\"capVoltage\":%u,\"moisture\":%u,\"rssi\":%i}", sensorId, sensor.sleeps, sensor.capVoltage, sensor.moisture, sensor.rssi);
             if (!firstSensor) {
                 strcat(result, ",");  // Add comma before each sensor data except the first one
             }
@@ -212,6 +213,10 @@ void loop()
         sensor.capVoltage = message >>  7 &      0b111111; //  6 bits,  7 left
         sensor.moisture   = message       &     0b1111111; //  7 bits,  0 left
 
+        // Get RSSI
+        sensor.rssi = driver.lastRssi();
+
+        // Indicate successful reception with blinking
         blink(2, color_purple);
 
         // Print to serial console
