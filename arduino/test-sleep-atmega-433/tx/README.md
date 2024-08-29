@@ -9,6 +9,8 @@ Requirements:
 - Copy the following link to the **File** > **Preferences** > **Additional boards manager URLs**:
 `https://raw.githubusercontent.com/damellis/attiny/ide-1.6.x-boards-manager/package_damellis_attiny_index.json`
 
+- Open **Tools** > **Board** > **Boards Manager** and install **attiny** by **David A. Mellis**
+
 ## Download and install RadioHead library
 1. Download [RadioHead](http://www.airspayce.com/mikem/arduino/RadioHead/RadioHead-1.130.zip)
 0. Install - **Sketch** > **Include Library** > **Add .ZIP Library**
