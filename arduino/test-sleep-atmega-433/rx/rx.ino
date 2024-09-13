@@ -15,15 +15,8 @@
 const char* ssid = STASSID;
 const char* password = STAPSK;
 
-WiFiMulti multi;
-WebServer server(80);
-
-// Atmega328p (for 6000 tx on attiny85 8 MHz)
-//RH_ASK driver(747, 11, -1, -1);
-
-// RP2040 (for 6000 tx on attiny85 8 MHz)
-RH_ASK driver(738, 2, -1, -1);
-
+const uint8_t pin_receiver = 2;
+const uint8_t pin_tuningTransmitter = 3;
 
 const uint8_t pin_ledRed   = 7;
 const uint8_t pin_ledGreen = 8;
@@ -33,6 +26,28 @@ const uint8_t pin_ledArray[] = {pin_ledRed, pin_ledGreen, pin_ledBlue};
 const uint8_t color_orange[] = {255, 40, 0};
 const uint8_t color_purple[] = {255, 0, 40};
 const uint8_t color_cyan[]   = {0, 255, 20};
+const uint8_t color_red[]    = {255, 0, 0};
+
+WiFiMulti multi;
+WebServer server(80);
+
+// Atmega328p (for 6000 tx on attiny85 8 MHz)
+//RH_ASK driver(?, 11, -1, -1);
+
+// RP2040 (for 6000 tx on attiny85 8 MHz)
+// Should be 6000, but 6200 works better
+//RH_ASK driver(6200, pin_receiver, -1, -1);
+
+// RP2040 (for 4000 tx on attiny85 8 MHz)
+// THis seems to be more reliable, than 6000
+// Should be 4000, but 3933 works better
+RH_ASK driver(3933, pin_receiver, -1, -1);
+
+// Debug timing
+#define TUNING_443 false
+#if TUNING_443 == true
+RH_ASK rh433(3933, -1, pin_tuningTransmitter, -1);
+#endif
 
 
 uint8_t messageFragments[RH_ASK_MAX_MESSAGE_LEN];
@@ -126,6 +141,11 @@ void setup()
       ;
 #endif
 
+    // Debug timing
+#if TUNING_443 == true
+    rh433.init();
+#endif
+
     delay(1000);
     Serial.print("booting....");
     delay(100);
@@ -138,6 +158,7 @@ void setup()
 
     if (multi.run() != WL_CONNECTED) {
       Serial.println("Unable to connect to network, rebooting in 10 seconds...");
+      blink(10, color_red);
       delay(10000);
       rp2040.reboot();
     }
@@ -222,4 +243,12 @@ void loop()
         // Print to serial console
         printSerialSensor(sensorId, message);
     }
+
+    // Debug timing
+#if TUNING_443 == true
+    rh433.send((uint8_t *)0, 1);
+    rh433.waitPacketSent();
+    blink(3, color_red);
+    delay(8000);
+#endif
 }

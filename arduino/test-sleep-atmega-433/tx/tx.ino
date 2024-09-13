@@ -66,7 +66,7 @@ uint16_t sleepCounterRequired = 0;
 uint16_t sleepCounter = sleepCounterRequired;
 
 SystemStatus ss;
-RH_ASK rh433(6000, -1, pin_tx, pin_txPower);
+RH_ASK rh433(4000, -1, pin_tx, pin_txPower);
 
 void setup_watchdog() {
     // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf
