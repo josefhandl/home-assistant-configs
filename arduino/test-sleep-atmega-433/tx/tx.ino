@@ -171,9 +171,13 @@ ISR(WDT_vect) {
 
 // Pin Change Interrupt Service - is executed when pin change is detected
 ISR(PCINT0_vect) {
-    // Set the sleepCounter to the value required to send the message
-    // This will cause the message will be send immediately
-    sleepCounter = sleepCounterRequired + 1;
+    // Check if PB1 (PCINT1) is HIGH to detect rising edge
+    // Rising edge = released button
+    if (bit_is_set(PINB, PB1)) {
+        // Set the sleepCounter to the value required to send the message
+        // This will cause the message will be send immediately
+        sleepCounter = sleepCounterRequired + 1;
+    }
 }
 
 void setup() {
