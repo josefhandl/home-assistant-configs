@@ -22,6 +22,7 @@
 #include <avr/power.h>
 #include <avr/interrupt.h>
 #include <TinyWireM.h>
+#include <EEPROM.h>
 
 #include "SystemStatus.h"
 #include "TinyBMP280.h"
@@ -47,7 +48,7 @@ const uint8_t pin_button       = 1; // pin 6
 const uint8_t pin_sensorPower  = 5; // pin 1
 
 // TODO will be randomly generated and stored in EEPROM
-const char sensorId = 170;
+uint16_t sensorId;
 
 uint16_t cycles = 0;
 
@@ -94,7 +95,7 @@ void setup_watchdog() {
     // 0=16ms, 1=32ms, 2=64ms, 3=128ms, 4=250ms, 5=500ms
     // 6=1sec, 7=2sec, 8=4sec, 9=8sec
     // (Selected hard-coded value is 9)
-    WDTCR = (1<<WDP3) | (0<<WDP2) | (0<<WDP1) | (1<<WDP0);;
+    WDTCR = (1<<WDP3) | (0<<WDP2) | (0<<WDP1) | (1<<WDP0);
 
     // Set WDIE in WDTCR to allows interrupts
     WDTCR |= _BV(WDIE);
@@ -108,9 +109,9 @@ void system_sleep() {
     setup_watchdog();
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
-    // Enable pin change interrupts
+    // Enable pin change interrupts globally
     sbi(GIMSK, PCIE);
-    // Enable PB1 pin interrupt
+    // Enable pin change interrupt for PB1 (PCINT1)
     sbi(PCMSK, PCINT1);
 
     // Enable sleep
@@ -123,7 +124,7 @@ void system_sleep() {
     // Disable sleep after wakeup
     sleep_disable();
 
-    // Diable PB1 pin interrupt
+    // Disable pin change interrupt for PB1 (PCINT1)
     cbi(PCMSK, PCINT1);
 
     // Switch ADC on
@@ -164,6 +165,29 @@ void sendMsg() {
     rh433.waitPacketSent();
 }
 
+void loadSensorId() {
+    sensorId = EEPROM.read(0) << 8 | EEPROM.read(1);
+
+    // Generate random ID if not set
+    if (sensorId == 0) {
+        // Generate random ID
+        randomSeed(analogRead(0));
+        sensorId = random(65536);
+
+        // Store ID in EEPROM
+        EEPROM.write(0, sensorId >> 8); // Store the high byte
+        EEPROM.write(1, sensorId & 0xFF); // Store the low byte
+    }
+}
+
+void sensorIdReset() {
+    // Reset the sensor ID
+    EEPROM.write(0, 0);
+    EEPROM.write(1, 0);
+    // Generate new sensor ID
+    loadSensorId();
+}
+
 // Watchdog Interrupt Service - is executed when watchdog timed out
 ISR(WDT_vect) {
     sleepCounter++;
@@ -194,6 +218,9 @@ void setup() {
     rh433.init();
 
     setup_watchdog();
+
+    // Load sensor ID from EEPROM if set, otherwise generate a new one
+    loadSensorId();
 }
 
 void loop() {
