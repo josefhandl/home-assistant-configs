@@ -27,6 +27,14 @@
 #include "SystemStatus.h"
 #include "TinyBMP280.h"
 
+enum IdResetState {
+    CLEAN,
+    KICKOFF,
+    WAITING,
+    WAITING_ACCOMPLISHED,
+    ORDERED
+};
+
 using namespace tbmp;
 
 tbmp::TinyBMP280 bmp;
@@ -49,6 +57,14 @@ const uint8_t pin_sensorPower  = 5; // pin 1
 
 // TODO will be randomly generated and stored in EEPROM
 uint16_t sensorId;
+
+// Sensor ID reset timeout
+const uint16_t idResetTimeout = 5000; // 5 seconds
+uint32_t idResetTime = 0;
+// Prevent triggering the sensor ID reset when startup
+bool idResetFlag = false;
+
+enum IdResetState idResetState = CLEAN;
 
 uint16_t cycles = 0;
 
@@ -195,12 +211,30 @@ ISR(WDT_vect) {
 
 // Pin Change Interrupt Service - is executed when pin change is detected
 ISR(PCINT0_vect) {
-    // Check if PB1 (PCINT1) is HIGH to detect rising edge
-    // Rising edge = released button
-    if (bit_is_set(PINB, PB1)) {
-        // Set the sleepCounter to the value required to send the message
-        // This will cause the message will be send immediately
-        sleepCounter = sleepCounterRequired + 1;
+    // Detect falling edge on PB1 (PCINT1)
+    // Falling edge = pressed button
+    if (bit_is_clear(PINB, PB1)) {
+        // Button pressed
+        //-------------------
+
+        // Kickoff the reset status
+        idResetState = KICKOFF;
+    } else {
+        // Button released
+        //--------------------
+
+        // If waiting was accomplished (one sleep cycle - cca. 8 seconds), order the reset command
+        if (idResetState == WAITING_ACCOMPLISHED) {
+            idResetState = ORDERED;
+        } else {
+            // If ID reset state isn't in the right condition, reset the state
+            idResetState = CLEAN;
+
+            // If not, immediately send message
+            // Set the sleepCounter to the value required to send the message
+            // This will cause the message will be send immediately
+            sleepCounter = sleepCounterRequired + 1;
+        }
     }
 }
 
@@ -224,6 +258,22 @@ void setup() {
 }
 
 void loop() {
+    switch (idResetState) {
+    // This is triggered immediatelly after btn pressed
+    case KICKOFF:
+        idResetState = WAITING;
+        break;
+    // This is triggered 1 sleep cycle after the previous
+    case WAITING:
+        idResetState = WAITING_ACCOMPLISHED;
+        break;
+    // This is triggered when btn has been released in right conditions
+    case ORDERED:
+        idResetState = CLEAN;
+        sensorIdReset();
+        break;
+    }
+
     if (sleepCounter > sleepCounterRequired){
         sleepCounter = 0;
         cycles++;
