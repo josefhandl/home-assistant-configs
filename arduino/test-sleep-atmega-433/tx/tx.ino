@@ -22,31 +22,37 @@
 #include <avr/power.h>
 #include <avr/interrupt.h>
 
-#include "SystemStatus.h"
+//#include "SystemStatus.h"
 
 // these define cbi and sbi, for as far they are not known yet
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 
-//                 +-\/-+
-// Ain0 (D5) PB5  1|    |8  Vcc
-// Ain3 (D3) PB3  2|    |7  PB2 (D2) Ain1
-// Ain2 (D4) PB4  3|    |6  PB1 (D1) pwm1
-//           GND  4|    |5  PB0 (D0) pwm0
-//                 +----+
+// ATtiny1614
+//----------------
+// 14-pin SOIC, 8-bit, 16kB Flash, 2kB SRAM, 256B EEPROM, 20MHz
 //
-const uint8_t pin_tx           = 2; // (D2), pin 7
-const uint8_t pin_txPower      = 4; // pin 3
-const uint8_t pin_soilMoisture = 1; // pin 6
-const uint8_t pin_button       = 3; // pin 2
+//                 +-\/-+
+//           VDD  1|    |14  GND
+//   SS AIN4 PA4  2|    |13  PA3 AIN3 SCK EXTCLK
+// VREF AIN5 PA5  3|    |12  PA2 AIN2 MISO EVOUTA
+//      AIN6 PA6  4|    |11  PA1 AIN1 MOSI
+//      AIN7 PA7  5|    |10  PA0 AIN0 RESET UPDI
+// RxD TOSC1 PB3  6|    | 9  PB0 AIN11 SCL XDIR
+// TxD TOSC2 PB2  7|    | 8  PB1 AIN10 SDA XCK
+//                 +----+
+
+const uint8_t pin_tx           = PIN_PB0;
+const uint8_t pin_txPower      = PIN_PB1;
+const uint8_t pin_led          = PIN_PA6;
+const uint8_t pin_soilMoisture = PIN_PA7;
+const uint8_t pin_button       = PIN_PA3;
 
 // TODO will be randomly generated and stored in EEPROM
 const char sensorId = 170;
 
 uint16_t cycles = 0;
 
-const uint8_t openAirReading = 590; //calibration data 1
-const uint8_t waterReading = 290;   //calibration data 2
 uint8_t moistureLevel = 0;
 uint8_t moisturePercentage = 0;
 
@@ -58,53 +64,45 @@ uint8_t moisturePercentage = 0;
 uint16_t sleepCounterRequired = 0;
 uint16_t sleepCounter = sleepCounterRequired;
 
-SystemStatus ss;
+//SystemStatus ss;
 RH_ASK rh433(6000, -1, pin_tx, pin_txPower);
 
-void setup_watchdog() {
-    // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf
 
-    // MCUSR - MCU Status Register
-    // -----
-    // WDRF  - Watchdog System Reset Flag
+void setup_pit() {
+    // Set the watchdog timer to trigger an interrupt after 8 seconds
+    //_PROTECTED_WRITE(WDT.CTRLA, WDT_PERIOD_8KCLK_gc);  // Set 8s timeout
 
-    // WDTCR - Watchdog Timer Control Register
-    // -----
-    // WDIE  - Watchdog Interrupt Enable
-    // WDCE  - Watchdog Change Enable
-    // WDE   - Watchdog System Reset Enable
-    // WDP   - Watchdog Timer Prescaler
+    // Enable watchdog interrupt mode (WDT will trigger an interrupt instead of a reset)
+    //_PROTECTED_WRITE(WDT.CTRLB, WDT_WINDOW_OFF_gc);    // No window mode, just standard timeout
+    //WDT.INTCTRL = WDT_INTEN_bm;  // Enable watchdog interrupt
 
-    // Clear the WDRF in MCUSR, allows to set WDE
-    MCUSR &= ~_BV(WDRF);
 
-    // Setting WDCE in WDTCR allows updates for 4 clock cycles
-    // Needed to change WDE or WDP
-    WDTCR |= _BV(WDCE) | _BV(WDE);
-
-    // Set new watchdog timeout value (WDP (Watchdog Timer Prescaler)) in WDTCR
-    // Defines values for the WDT to timeout
-    // 0=16ms, 1=32ms, 2=64ms, 3=128ms, 4=250ms, 5=500ms
-    // 6=1sec, 7=2sec, 8=4sec, 9=8sec
-    // (Selected hard-coded value is 9)
-    WDTCR = (1<<WDP3) | (0<<WDP2) | (0<<WDP1) | (1<<WDP0);;
-
-    // Set WDIE in WDTCR to allows interrupts
-    WDTCR |= _BV(WDIE);
+    // Configure the RTC Counter
+    // Use the internal 1.024 kHz oscillator for the RTC
+    RTC.CLKSEL = RTC_CLKSEL_INT1K_gc;
+    // Enable the PIT with a 1-second interval (1024 cycles of 1.024 kHz clock)
+    //RTC.PITCTRLA = RTC_PERIOD_CYC32768_gc | RTC_PITEN_bm;  // Enable PIT
+    RTC.PITCTRLA = RTC_PERIOD_CYC8192_gc | RTC_PITEN_bm;  // Enable PIT
+    // Enable the PIT interrupt
+    RTC.PITINTCTRL = RTC_PI_bm;
 }
+
+
 
 // system wakes up when watchdog is timed out
 void system_sleep() {
     // Switch ADC off
-    cbi(ADCSRA, ADEN);
+    //cbi(ADCSRA, ADEN);
+    //ADC0.CTRLA &= ~ADC_ENABLE_bm; // Disable ADC to save power
 
-    setup_watchdog();
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
     // Enable pin change interrupts
-    sbi(GIMSK, PCIE);
+    //sbi(GIMSK, PCIE);
     // Enable PB3 pin interrupt
-    sbi(PCMSK, PCINT3);
+    //sbi(PCMSK, PCINT3);
+    // Enable pin change interrupt on PA3
+    PORTA.PIN3CTRL = PORT_ISC_FALLING_gc; // Interrupt on falling edge
 
     // Enable sleep
     sleep_enable();
@@ -117,22 +115,22 @@ void system_sleep() {
     sleep_disable();
 
     // Diable PB3 pin interrupt
-    cbi(PCMSK, PCINT3);
+    //cbi(PCMSK, PCINT3);
 
     // Switch ADC on
-    sbi(ADCSRA, ADEN);
+    //sbi(ADCSRA, ADEN);
+    //ADC0.CTRLA |= ADC_ENABLE_bm;  // Enable ADC
 }
 
 void sendMsg() {
     // Get VCC voltage (supercap)
-    uint8_t capVoltage = ss.getVCC() / 100;
+    uint8_t capVoltage = 100; //ss.getVCC() / 100;
 
     // Get moisture level
-    moistureLevel = analogRead(pin_soilMoisture);
-    moisturePercentage = map(moistureLevel, openAirReading, waterReading, 0, 100);
+    moistureLevel = 50;
 
     // Create message
-    uint32_t message;
+    uint32_t message = 0;
     message |= (uint32_t)sensorId   << 24; //     8 bits, 24 left
     message |= (uint32_t)cycles     << 13; //    11 bits, 13 left
     message |= (uint32_t)capVoltage <<  7; //     6 bits,  7 left
@@ -150,29 +148,46 @@ void sendMsg() {
     rh433.waitPacketSent();
 }
 
+
 // Watchdog Interrupt Service - is executed when watchdog timed out
-ISR(WDT_vect) {
+ISR(RTC_PIT_vect) {
+    // Clear the overflow flag
+    RTC.PITINTFLAGS = RTC_PI_bm;  // Clear the interrupt flag
+
     sleepCounter++;
 }
 
 // Pin Change Interrupt Service - is executed when pin change is detected
-ISR(PCINT0_vect) {
+ISR(PORTA_PORT_vect) {
+    // Clear the interrupt flag for PA3
+    VPORTA.INTFLAGS = PIN3_bm;  // Clear PA3 interrupt flag
+
     // Set the sleepCounter to the value required to send the message
     // This will cause the message will be send immediately
     sleepCounter = sleepCounterRequired + 1;
 }
 
+
 void setup() {
     pinMode(pin_soilMoisture, INPUT);
+    pinMode(pin_led, OUTPUT);
+    digitalWrite(pin_led, HIGH);
     pinMode(pin_button, INPUT);
     digitalWrite(pin_button, HIGH);
 
     // Enable interrupts so the WDT can wake us up
     sei();
 
-    rh433.init();
+    if (!rh433.init()) {
+        while (true) {
+            digitalWrite(pin_led, LOW);
+            delay(100);
+            digitalWrite(pin_led, HIGH);
+            delay(100);
+        }
+    }
 
-    setup_watchdog();
+    setup_pit();
 }
 
 void loop() {
@@ -181,6 +196,14 @@ void loop() {
         cycles++;
         sendMsg();
     }
+
+    digitalWrite(pin_led, LOW);
+
+    delay(1000);
+
+    digitalWrite(pin_led, HIGH);
+
+    delay(1000);
 
     system_sleep();
 }
