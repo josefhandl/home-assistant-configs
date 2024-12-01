@@ -1,7 +1,9 @@
+/*
 #include <RH_ASK.h>
 #ifdef RH_HAVE_HARDWARE_SPI
 #include <SPI.h> // Not actually used but needed to compile
 #endif
+*/
 
 // RH_ASK.h
 //--------------
@@ -32,8 +34,8 @@
 //----------------
 // 14-pin SOIC, 8-bit, 16kB Flash, 2kB SRAM, 256B EEPROM, 20MHz
 //
-//                 +-\/-+
-//           VDD  1|    |14  GND
+//                 +----+
+//           VDD  1|O   |14  GND
 //   SS AIN4 PA4  2|    |13  PA3 AIN3 SCK EXTCLK
 // VREF AIN5 PA5  3|    |12  PA2 AIN2 MISO EVOUTA
 //      AIN6 PA6  4|    |11  PA1 AIN1 MOSI
@@ -65,7 +67,7 @@ uint16_t sleepCounterRequired = 0;
 uint16_t sleepCounter = sleepCounterRequired;
 
 //SystemStatus ss;
-RH_ASK rh433(6000, -1, pin_tx, pin_txPower);
+//RH_ASK rh433(6000, -1, pin_tx, pin_txPower);
 
 
 void setup_pit() {
@@ -102,7 +104,9 @@ void system_sleep() {
     // Enable PB3 pin interrupt
     //sbi(PCMSK, PCINT3);
     // Enable pin change interrupt on PA3
-    PORTA.PIN3CTRL = PORT_ISC_FALLING_gc; // Interrupt on falling edge
+    PORTA.PIN3CTRL = PORT_PULLUPEN_bm | PORT_ISC_BOTHEDGES_gc; // Interrupt on falling edge
+    // PORT_ISC_FALLING_gc doesn't work for PA3 for some reason
+    // https://forum.arduino.cc/t/tinyavr-series-1-e-g-attiny1614-wake-up-from-interrupt/912065
 
     // Enable sleep
     sleep_enable();
@@ -144,8 +148,8 @@ void sendMsg() {
     messageArray[3] = message;
 
     // Send message
-    rh433.send((uint8_t *)messageArray, 4);
-    rh433.waitPacketSent();
+    //rh433.send((uint8_t *)messageArray, 4);
+    //rh433.waitPacketSent();
 }
 
 
@@ -160,7 +164,7 @@ ISR(RTC_PIT_vect) {
 // Pin Change Interrupt Service - is executed when pin change is detected
 ISR(PORTA_PORT_vect) {
     // Clear the interrupt flag for PA3
-    VPORTA.INTFLAGS = PIN3_bm;  // Clear PA3 interrupt flag
+    PORTA.INTFLAGS = PIN3_bm;  // Clear PA3 interrupt flag
 
     // Set the sleepCounter to the value required to send the message
     // This will cause the message will be send immediately
@@ -169,15 +173,20 @@ ISR(PORTA_PORT_vect) {
 
 
 void setup() {
+    //pinMode(Unused2, INPUT_PULLUP);
+    //pinMode(Unused3, INPUT_PULLUP);
+    //pinMode(Unused5, INPUT_PULLUP);
+
     pinMode(pin_soilMoisture, INPUT);
     pinMode(pin_led, OUTPUT);
     digitalWrite(pin_led, HIGH);
-    pinMode(pin_button, INPUT);
-    digitalWrite(pin_button, HIGH);
+    //pinMode(pin_button, INPUT);
+    //digitalWrite(pin_button, HIGH);
 
     // Enable interrupts so the WDT can wake us up
     sei();
 
+    /*
     if (!rh433.init()) {
         while (true) {
             digitalWrite(pin_led, LOW);
@@ -186,6 +195,7 @@ void setup() {
             delay(100);
         }
     }
+    */
 
     setup_pit();
 }
