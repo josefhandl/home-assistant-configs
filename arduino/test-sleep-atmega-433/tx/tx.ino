@@ -1,9 +1,9 @@
-/*
+
 #include <RH_ASK.h>
-#ifdef RH_HAVE_HARDWARE_SPI
-#include <SPI.h> // Not actually used but needed to compile
-#endif
-*/
+//#ifdef RH_HAVE_HARDWARE_SPI
+//#include <SPI.h> // Not actually used but needed to compile
+//#endif
+
 
 // RH_ASK.h
 //--------------
@@ -89,8 +89,6 @@ void setup_pit() {
     RTC.PITINTCTRL = RTC_PI_bm;
 }
 
-
-
 // system wakes up when watchdog is timed out
 void system_sleep() {
     // Switch ADC off
@@ -103,8 +101,10 @@ void system_sleep() {
     //sbi(GIMSK, PCIE);
     // Enable PB3 pin interrupt
     //sbi(PCMSK, PCINT3);
+
     // Enable pin change interrupt on PA3
-    PORTA.PIN3CTRL = PORT_PULLUPEN_bm | PORT_ISC_BOTHEDGES_gc; // Interrupt on falling edge
+    //PORTA.PIN3CTRL = PORT_PULLUPEN_bm | PORT_ISC_BOTHEDGES_gc; // ISR(PORTA_PORT_vect) definition causes conflict with RadioHead
+    attachInterrupt(digitalPinToInterrupt(PIN_PA3), isr_pin, CHANGE);
     // PORT_ISC_FALLING_gc doesn't work for PA3 for some reason
     // https://forum.arduino.cc/t/tinyavr-series-1-e-g-attiny1614-wake-up-from-interrupt/912065
 
@@ -162,9 +162,11 @@ ISR(RTC_PIT_vect) {
 }
 
 // Pin Change Interrupt Service - is executed when pin change is detected
-ISR(PORTA_PORT_vect) {
+//ISR(PORTA_PORT_vect) {
+void isr_pin() {
     // Clear the interrupt flag for PA3
-    PORTA.INTFLAGS = PIN3_bm;  // Clear PA3 interrupt flag
+    //PORTA.INTFLAGS = PIN3_bm;  // Clear PA3 interrupt flag
+    sleep_disable();
 
     // Set the sleepCounter to the value required to send the message
     // This will cause the message will be send immediately
@@ -180,7 +182,7 @@ void setup() {
     pinMode(pin_soilMoisture, INPUT);
     pinMode(pin_led, OUTPUT);
     digitalWrite(pin_led, HIGH);
-    //pinMode(pin_button, INPUT);
+    pinMode(pin_button, INPUT_PULLUP);
     //digitalWrite(pin_button, HIGH);
 
     // Enable interrupts so the WDT can wake us up
