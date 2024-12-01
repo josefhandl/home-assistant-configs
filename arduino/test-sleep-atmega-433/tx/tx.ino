@@ -67,7 +67,7 @@ uint16_t sleepCounterRequired = 0;
 uint16_t sleepCounter = sleepCounterRequired;
 
 //SystemStatus ss;
-//RH_ASK rh433(6000, -1, pin_tx, pin_txPower);
+RH_ASK rh433(6000, -1, pin_tx, pin_txPower);
 
 
 void setup_pit() {
@@ -148,8 +148,8 @@ void sendMsg() {
     messageArray[3] = message;
 
     // Send message
-    //rh433.send((uint8_t *)messageArray, 4);
-    //rh433.waitPacketSent();
+    rh433.send((uint8_t *)messageArray, 4);
+    rh433.waitPacketSent();
 }
 
 
@@ -162,7 +162,7 @@ ISR(RTC_PIT_vect) {
 }
 
 // Pin Change Interrupt Service - is executed when pin change is detected
-//ISR(PORTA_PORT_vect) {
+//ISR(PORTB_PORT_vect) { // This causes conflict with RadioHead
 void isr_pin() {
     // Clear the interrupt flag for PA3
     //PORTA.INTFLAGS = PIN3_bm;  // Clear PA3 interrupt flag
@@ -188,7 +188,6 @@ void setup() {
     // Enable interrupts so the WDT can wake us up
     sei();
 
-    /*
     if (!rh433.init()) {
         while (true) {
             digitalWrite(pin_led, LOW);
@@ -197,7 +196,6 @@ void setup() {
             delay(100);
         }
     }
-    */
 
     setup_pit();
 }
@@ -208,14 +206,6 @@ void loop() {
         cycles++;
         sendMsg();
     }
-
-    digitalWrite(pin_led, LOW);
-
-    delay(1000);
-
-    digitalWrite(pin_led, HIGH);
-
-    delay(1000);
 
     system_sleep();
 }
