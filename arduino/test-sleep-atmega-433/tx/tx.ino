@@ -67,7 +67,11 @@ uint16_t sleepCounterRequired = 0;
 uint16_t sleepCounter = sleepCounterRequired;
 
 //SystemStatus ss;
-RH_ASK rh433(6000, -1, pin_tx, pin_txPower);
+
+// Preambule lenght (this device)
+// 6000 attiny1614 4 MHz - 93.23 Hz, 10.73 ms
+// 5500 attiny1614 4 MHz - 91.57 Hz, 10.95 ms
+RH_ASK rh433(5500, -1, pin_tx, pin_txPower);
 
 
 void setup_pit() {

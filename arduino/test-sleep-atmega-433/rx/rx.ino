@@ -22,7 +22,12 @@ WebServer server(80);
 //RH_ASK driver(747, 11, -1, -1);
 
 // RP2040 (for 6000 tx on attiny85 8 MHz)
-RH_ASK driver(738, 2, -1, -1);
+//RH_ASK driver(738, 2, -1, -1);
+
+// RP2040 (for 5500 tx on attiny1614 4 MHz)
+// Preambule leght (this device)
+// (3200 RP2040 133 MHz - cca 91.5 Hz)
+RH_ASK driver(3200, 2, -1, -1);
 
 
 const uint8_t pin_ledRed   = 7;
@@ -222,4 +227,10 @@ void loop()
         // Print to serial console
         printSerialSensor(sensorId, message);
     }
+    /*
+    uint8_t messageArray[4];
+    driver.send((uint8_t *)messageArray, 4);
+    driver.waitPacketSent();
+    delay(10000);
+    */
 }
