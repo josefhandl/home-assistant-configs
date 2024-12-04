@@ -132,7 +132,7 @@ void system_sleep() {
 
 void sendMsg() {
     // Get VCC voltage (supercap)
-    uint8_t capVoltage = 100; //ss.getVCC() / 100;
+    uint8_t capVoltage = getVcc();
 
     // Get moisture level
     moistureLevel = 50;
@@ -154,6 +154,22 @@ void sendMsg() {
     // Send message
     rh433.send((uint8_t *)messageArray, 4);
     rh433.waitPacketSent();
+}
+
+// http://www.technoblogy.com/show?3K82
+void getVccSetup () {
+    VREF.CTRLA = VREF_ADC0REFSEL_1V1_gc;
+    ADC0.CTRLC = ADC_REFSEL_VDDREF_gc | ADC_PRESC_DIV256_gc; // 78kHz clock
+    ADC0.MUXPOS = ADC_MUXPOS_INTREF_gc;                  // Measure INTREF
+    ADC0.CTRLA = ADC_ENABLE_bm;                          // Single, 10-bit
+}
+
+uint8_t getVcc () {
+    ADC0.COMMAND = ADC_STCONV_bm;                        // Start conversion
+    while (ADC0.COMMAND & ADC_STCONV_bm);                // Wait for completion
+    uint16_t adc_reading = ADC0.RES;                     // ADC conversion result
+    uint16_t voltage = 11264/adc_reading;
+    return (uint8_t)voltage;
 }
 
 
@@ -191,6 +207,8 @@ void setup() {
 
     // Enable interrupts so the WDT can wake us up
     sei();
+
+    getVccSetup();
 
     if (!rh433.init()) {
         while (true) {
