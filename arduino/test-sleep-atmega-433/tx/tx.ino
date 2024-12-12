@@ -148,6 +148,7 @@ void sendMsg() {
     getVccReset();
 
     // Get moisture level
+    bmp280.takeForcedMeasurement(); // Init reading the data from sensor in sleep mode
     moisturePercentage = (int8_t)(bmp280.readTemperature());
 
     // Create message
@@ -248,6 +249,13 @@ void setup() {
     if (!status) {
         while (1);
     }
+
+    // Set Forced mode to put sensor to sleep after measurement
+    bmp280.setSampling(Adafruit_BMP280::MODE_FORCED,
+                Adafruit_BMP280::SAMPLING_X1, // Temperature sampling set to 1
+                Adafruit_BMP280::SAMPLING_X1, // Pressure sampling set to 1
+                Adafruit_BMP280::FILTER_OFF   // Filter off - immediate 100% step response
+                );
 
     setup_pit();
 }
