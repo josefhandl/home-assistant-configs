@@ -44,20 +44,20 @@
 // TxD TOSC2 PB2  7|    | 8  PB1 AIN10 SDA XCK
 //                 +----+
 
-const uint8_t pin_tx           = PIN_PB0;
-const uint8_t pin_txPower      = PIN_PB1;
+const uint8_t pin_tx           = PIN_PB2;
+const uint8_t pin_txPower      = PIN_PB3;
 const uint8_t pin_led          = PIN_PA6;
 //const uint8_t pin_soilMoisture = PIN_PA7;
 const uint8_t pin_button       = PIN_PA3;
 
 const uint8_t pin_unused0      = PIN_PA0;
-const uint8_t pin_unused1      = PIN_PA1;
-const uint8_t pin_unused2      = PIN_PA2;
 const uint8_t pin_unused3      = PIN_PA4;
 const uint8_t pin_unused4      = PIN_PA5;
-const uint8_t pin_unused5      = PIN_PB2;
-const uint8_t pin_unused6      = PIN_PB3;
 const uint8_t pin_unused7      = PIN_PA7;
+const uint8_t pin_unused2      = PIN_PA2;
+const uint8_t pin_unused1      = PIN_PA1;
+const uint8_t pin_unused5      = PIN_PB0;
+const uint8_t pin_unused6      = PIN_PB1;
 
 // TODO will be randomly generated and stored in EEPROM
 const char sensorId = 170;
