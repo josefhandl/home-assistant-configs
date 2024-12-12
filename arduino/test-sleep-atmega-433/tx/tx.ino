@@ -47,8 +47,17 @@
 const uint8_t pin_tx           = PIN_PB0;
 const uint8_t pin_txPower      = PIN_PB1;
 const uint8_t pin_led          = PIN_PA6;
-const uint8_t pin_soilMoisture = PIN_PA7;
+//const uint8_t pin_soilMoisture = PIN_PA7;
 const uint8_t pin_button       = PIN_PA3;
+
+const uint8_t pin_unused0      = PIN_PA0;
+const uint8_t pin_unused1      = PIN_PA1;
+const uint8_t pin_unused2      = PIN_PA2;
+const uint8_t pin_unused3      = PIN_PA4;
+const uint8_t pin_unused4      = PIN_PA5;
+const uint8_t pin_unused5      = PIN_PB2;
+const uint8_t pin_unused6      = PIN_PB3;
+const uint8_t pin_unused7      = PIN_PA7;
 
 // TODO will be randomly generated and stored in EEPROM
 const char sensorId = 170;
@@ -115,7 +124,7 @@ void system_sleep() {
     // Enable sleep
     sleep_enable();
     // Enter sleep mode and wait for INT0
-    sleep_mode();
+    sleep_cpu();
 
     // ----- MCU is sleeping -----
 
@@ -132,7 +141,9 @@ void system_sleep() {
 
 void sendMsg() {
     // Get VCC voltage (supercap)
+    getVccSetup();
     uint8_t capVoltage = getVcc();
+    getVccReset();
 
     // Get moisture level
     moistureLevel = 50;
@@ -160,7 +171,7 @@ void sendMsg() {
 void getVccSetup () {
     VREF.CTRLA = VREF_ADC0REFSEL_1V1_gc;
     ADC0.CTRLC = ADC_REFSEL_VDDREF_gc | ADC_PRESC_DIV256_gc; // 78kHz clock
-    ADC0.MUXPOS = ADC_MUXPOS_INTREF_gc;                  // Measure INTREF
+    ADC0.MUXPOS = ADC_MUXPOS_INTREF_gc;                  // Measure from INTREF (INTREF as input)
     ADC0.CTRLA = ADC_ENABLE_bm;                          // Single, 10-bit
 }
 
@@ -170,6 +181,11 @@ uint8_t getVcc () {
     uint16_t adc_reading = ADC0.RES;                     // ADC conversion result
     uint16_t voltage = 11264/adc_reading;
     return (uint8_t)voltage;
+}
+
+uint8_t getVccReset() {
+    ADC0.CTRLA &= ~ADC_ENABLE_bm;  // Disable ADC
+    ADC0.MUXPOS = ADC_MUXPOS_GND_gc;  // Set input to GND
 }
 
 
@@ -195,11 +211,16 @@ void isr_pin() {
 
 
 void setup() {
-    //pinMode(Unused2, INPUT_PULLUP);
-    //pinMode(Unused3, INPUT_PULLUP);
-    //pinMode(Unused5, INPUT_PULLUP);
+    pinMode(pin_unused0, INPUT_PULLUP);
+    pinMode(pin_unused1, INPUT_PULLUP);
+    pinMode(pin_unused2, INPUT_PULLUP);
+    pinMode(pin_unused3, INPUT_PULLUP);
+    pinMode(pin_unused4, INPUT_PULLUP);
+    pinMode(pin_unused5, INPUT_PULLUP);
+    pinMode(pin_unused6, INPUT_PULLUP);
+    pinMode(pin_unused7, INPUT_PULLUP);
 
-    pinMode(pin_soilMoisture, INPUT);
+    //pinMode(pin_soilMoisture, INPUT);
     pinMode(pin_led, OUTPUT);
     digitalWrite(pin_led, HIGH);
     pinMode(pin_button, INPUT_PULLUP);
@@ -207,8 +228,6 @@ void setup() {
 
     // Enable interrupts so the WDT can wake us up
     sei();
-
-    getVccSetup();
 
     if (!rh433.init()) {
         while (true) {
