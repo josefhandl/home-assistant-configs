@@ -3,6 +3,7 @@
 //#ifdef RH_HAVE_HARDWARE_SPI
 //#include <SPI.h> // Not actually used but needed to compile
 //#endif
+#include <Adafruit_BMP280.h>
 
 
 // RH_ASK.h
@@ -82,6 +83,7 @@ uint16_t sleepCounter = sleepCounterRequired;
 // 5500 attiny1614 4 MHz - 91.57 Hz, 10.95 ms
 RH_ASK rh433(5500, -1, pin_tx, pin_txPower);
 
+Adafruit_BMP280 bmp280;
 
 void setup_pit() {
     // Set the watchdog timer to trigger an interrupt after 8 seconds
@@ -146,7 +148,7 @@ void sendMsg() {
     getVccReset();
 
     // Get moisture level
-    moistureLevel = 50;
+    moisturePercentage = (int8_t)(bmp280.readTemperature());
 
     // Create message
     uint32_t message = 0;
@@ -236,6 +238,15 @@ void setup() {
             digitalWrite(pin_led, HIGH);
             delay(100);
         }
+    }
+
+    bool status;
+
+    // default settings
+    // (you can also pass in a Wire library object like &Wire2)
+    status = bmp280.begin(0x76);
+    if (!status) {
+        while (1);
     }
 
     setup_pit();
