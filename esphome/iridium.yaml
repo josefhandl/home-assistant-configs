@@ -3,7 +3,11 @@ substitutions:
 
 esphome:
   name: ${device}
-  platform: ESP8266
+  platformio_options:
+    build_flags:
+      - -DPIO_FRAMEWORK_ARDUINO_MMU_CACHE16_IRAM48_SECHEAP_SHARED
+
+esp8266:
   board: d1_mini
 
 <<: !include base.yaml
@@ -24,35 +28,78 @@ binary_sensor:
     name: "${device}.button"
 #    device_class: window
 
+#https://community.home-assistant.io/t/full-guide-to-read-bme680-via-bsec2-on-esp8266/778505
+
 i2c:
-  sda: D2
-  scl: D1
-  scan: true
-  id: bus_a
+#  sda: D2
+#  scl: D1
+#  scan: true
+#  id: bus_a
+
+bme68x_bsec2_i2c:
+  address: 0x77
+  model: bme680
+#  operating_age: 1d
+  sample_rate: LP
+  supply_voltage: 3.3V
 
 sensor:
-  - platform: bme280
+  - platform: bme68x_bsec2
     temperature:
+#      name: "BME68x Temperature"
       name: "${device}.temperature"
-      device_class: "temperature"
-      oversampling: 8x
-      accuracy_decimals: 2
-# teplomer ukazuje trochu vic, protoze je schovany v polici, ktera je ohrata od elektroniky
-      filters:
-        - offset: -0.8
-        - sliding_window_moving_average:
-            window_size: 4
-            send_every: 1
     pressure:
+#      name: "BME68x Pressure"
       name: "${device}.pressure"
-      device_class: "pressure"
-      oversampling: 8x
     humidity:
+#      name: "BME68x Humidity"
       name: "${device}.humidity"
-      device_class: "humidity"
-      oversampling: 8x
-    address: 0x76
-    update_interval: 15s
+    iaq:
+#      name: "BME68x IAQ"
+      name: "${device}.iaq"
+      # "id" referenced by the text_sensor
+      id: iaq
+    co2_equivalent:
+#      name: "BME68x CO2 Equivalent"
+      name: "${device}.co2_equivalent"
+      # "id" referenced by the text_sensor
+      id: co2_equivalent
+    breath_voc_equivalent:
+#      name: "BME68x Breath VOC Equivalent"
+      name: "${device}.breath_voc_equivalent"
+
+text_sensor:
+  - platform: template
+#    name: "BME68x IAQ Classification"
+    name: "${device}.iaq_classification"
+    lambda: |-
+      if (int(id(iaq).state) == 50 && int(id(co2_equivalent).state) == 500) {
+        return {"error"};
+      }
+      else if (int(id(iaq).state) <= 50) {
+        return {"Excellent"};
+      }
+      else if (int(id(iaq).state) >= 51 && int(id(iaq).state) <= 100) {
+        return {"Good"};
+      }
+      else if (int(id(iaq).state) >= 101 && int(id(iaq).state) <= 150) {
+        return {"Lightly polluted"};
+      }
+      else if (int(id(iaq).state) >= 151 && int(id(iaq).state) <= 200) {
+        return {"Moderately polluted"};
+      }
+      else if (int(id(iaq).state) >= 201 && int(id(iaq).state) <= 250) {
+        return {"Heavily polluted"};
+      }
+      else if (int(id(iaq).state) >= 251 && int(id(iaq).state) <= 350) {
+        return {"Severely polluted"};
+      }
+      else if (int(id(iaq).state) >= 351) {
+        return {"Extremely polluted"};
+      }
+      else {
+        return {"error"};
+      }
 
 light:
   - platform: monochromatic
