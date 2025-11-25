@@ -12,10 +12,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .sensors.sensors import (
     AttinyCyclesSensor,
     AttinyCapVoltageSensor,
-    AttinyMoistureSensor
+    AttinyTemperatureSensor
 )
 
-from .attiny import attinyAPI
+from .attiny import AttinyAPI
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ async def async_setup_entry(
     host = config_entry.data[CONF_HOST]
     if host[-1] == "/":
         host = host[:-1]
-    attiny = attinyAPI(host)
+    attiny = AttinyAPI(hass, host)
     coordinator_sensors = BasicCoordinator(hass, attiny.get_sensors)
 
     await coordinator_sensors.async_config_entry_first_refresh()
@@ -69,7 +69,7 @@ async def async_setup_entry(
                 AttinyCapVoltageSensor(
                     sensor_id=sensor_id, coordinator=coordinator_sensors
                 ),
-                AttinyMoistureSensor(
+                AttinyTemperatureSensor(
                     sensor_id=sensor_id, coordinator=coordinator_sensors
                 ),
             ],

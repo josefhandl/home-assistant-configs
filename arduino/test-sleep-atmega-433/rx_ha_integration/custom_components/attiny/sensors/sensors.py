@@ -9,7 +9,6 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import TEMP_CELSIUS
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
@@ -102,15 +101,15 @@ class AttinyCapVoltageSensor(AttinySensor):
         self.async_write_ha_state()
 
 
-class AttinyMoistureSensor(AttinySensor):
+class AttinyTemperatureSensor(AttinySensor):
     """Representation of a Sensor."""
 
-    _attr_name = "Attiny moisture"
-    _name_template = "Attiny {} moisture"
-    _attr_native_unit_of_measurement = "%"
-    _attr_device_class = SensorDeviceClass.MOISTURE
+    _attr_name = "Attiny temperature"
+    _name_template = "Attiny {} temperature"
+    _attr_native_unit_of_measurement = "°C"
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _sensor_posfix = "moisture"
+    _sensor_posfix = "temperature"
 
     @callback
     def _handle_coordinator_update(self) -> None:
