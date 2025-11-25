@@ -3,10 +3,18 @@ substitutions:
 
 esphome:
   name: ${device}
-  platform: ESP8266
+
+esp8266:
   board: d1_mini
 
 <<: !include base.yaml
+
+output:
+  - platform: esp8266_pwm
+    pin: D7
+    frequency: 1000 Hz
+    id: pwm_output_0
+#    max_power: 0.1
 
 remote_receiver:
   pin: 
@@ -25,74 +33,13 @@ remote_transmitter:
   pin: D2
   carrier_duty_percent: 50%
 
+light:
+  - platform: monochromatic
+    output: pwm_output_0
+    name: "${device}.white"
+
 # Individual switches
 switch:
-
-# TV
-# ======
-  - platform: template
-    name: "tv.power"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xF708
-  - platform: template
-    name: "tv.poweron"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0x3BC4
-  - platform: template
-    name: "tv.poweroff"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0x3AC5
-
-  - platform: template
-    name: "tv.hdmi1"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0x31CE
-  - platform: template
-    name: "tv.hdmi2"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0x33CC
-  - platform: template
-    name: "tv.hdmi3"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0x16E9
-
-  - platform: template
-    name: "tv.volup"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xFD02
-  - platform: template
-    name: "tv.voldown"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xFC03
-  - platform: template
-    name: "tv.volmute"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xF609
-
-  - platform: template
-    name: "tv.exit"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xA45B
 
 # Hi-Fi
 # ======
@@ -121,6 +68,42 @@ switch:
       remote_transmitter.transmit_nec:
         address: 0xFF00
         command: 0xF50A
+  - platform: template
+    name: "hifi.1"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFF00
+        command: 0xBF40
+  - platform: template
+    name: "hifi.2"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFF00
+        command: 0xBB44
+  - platform: template
+    name: "hifi.3"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFF00
+        command: 0xB748
+  - platform: template
+    name: "hifi.fm"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFF00
+        command: 0xF807
+  - platform: template
+    name: "hifi.audioin"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFF00
+        command: 0xF00F
+  - platform: template
+    name: "hifi.usb"
+    turn_on_action:
+      remote_transmitter.transmit_nec:
+        address: 0xFF00
+        command: 0xE916
 
   - platform: template
     name: "hifi.soundmode"
@@ -134,20 +117,4 @@ switch:
       remote_transmitter.transmit_nec:
         address: 0xFF00
         command: 0xF20D
-
-# Xbox
-# ======
-
-  - platform: template
-    name: "xbox.poweron"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xD880
-        command: 0xD52A
-  - platform: template
-    name: "xbox.poweroff"
-    turn_on_action:
-      remote_transmitter.transmit_nec:
-        address: 0xD880
-        command: 0xD629
 

@@ -14,18 +14,18 @@ esp8266:
 
 output:
   - platform: esp8266_pwm
-    pin: D3
+    pin: D5
     frequency: 1000 Hz
     id: pwm_output_0
   - platform: esp8266_pwm
-    pin: D7
+    pin: D6
     frequency: 1000 Hz
     id: pwm_output_1
 
-binary_sensor:
-  - platform: gpio
-    pin: D6
-    name: "${device}.button"
+#binary_sensor:
+#  - platform: gpio
+#    pin: D6
+#    name: "${device}.button"
 #    device_class: window
 
 #https://community.home-assistant.io/t/full-guide-to-read-bme680-via-bsec2-on-esp8266/778505
@@ -48,6 +48,7 @@ sensor:
     temperature:
 #      name: "BME68x Temperature"
       name: "${device}.temperature"
+      accuracy_decimals: 2
     pressure:
 #      name: "BME68x Pressure"
       name: "${device}.pressure"
@@ -59,6 +60,9 @@ sensor:
       name: "${device}.iaq"
       # "id" referenced by the text_sensor
       id: iaq
+#    iaq_accuracy:
+##      name: "BME68x IAQ Accuracy"
+#      name: "${device}.iaq_accuracy"
     co2_equivalent:
 #      name: "BME68x CO2 Equivalent"
       name: "${device}.co2_equivalent"
@@ -69,6 +73,11 @@ sensor:
       name: "${device}.breath_voc_equivalent"
 
 text_sensor:
+  - platform: bme68x_bsec2
+    iaq_accuracy:
+#      name: "BME68x IAQ Accuracy"
+      name: "${device}.iaq_accuracy"
+
   - platform: template
 #    name: "BME68x IAQ Classification"
     name: "${device}.iaq_classification"
@@ -104,8 +113,8 @@ text_sensor:
 light:
   - platform: monochromatic
     output: pwm_output_0
-    name: "${device}.white"
+    name: "${device}.white_1"
   - platform: monochromatic
     output: pwm_output_1
-    name: "${device}.violet"
+    name: "${device}.white_2"
 
